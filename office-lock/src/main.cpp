@@ -3,6 +3,7 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include <Preferences.h>
+#include "mbedtls/sha256.h"
 
 // Standalone office door lock. No backend, no database, no companion app —
 // the ESP32 hosts its own login-protected web page on the office WiFi.
@@ -13,7 +14,6 @@
 #define RELAY_PIN 27
 #define BOOT_BUTTON_PIN 0        // hold 3s at power-on to factory reset
 #define AP_SSID "OfficeDoor-Setup"
-#define AP_PASS "setup1234"
 #define MDNS_NAME "doorlock"     // -> http://doorlock.local/
 
 const unsigned long UNLOCK_PULSE_MS = 1000;
@@ -36,6 +36,43 @@ bool configured = false;
 String savedSsid, savedPass, adminUser, adminPass;
 String userNames[MAX_USERS], userPasses[MAX_USERS];
 int userCount = 0;
+String apPassword; // computed at boot, see deviceIdSuffix()
+
+// Short, deterministic string derived from the chip's own unique ID (not the
+// WiFi MAC, so this works before WiFi has ever been brought up). Used to
+// build a per-device setup AP password so every unit in the field doesn't
+// share the same "setup1234" - anyone who'd read it off one device's serial
+// console can't reuse it against another.
+String deviceIdSuffix() {
+    char buf[7];
+    snprintf(buf, sizeof(buf), "%06X", (uint32_t)(ESP.getEfuseMac() & 0xFFFFFF));
+    return String(buf);
+}
+
+// ---------- password hashing ----------
+// Login passwords (admin + per-user) are only ever kept as a salted SHA-256
+// hash in flash, never plaintext - Preferences storage is otherwise trivial
+// to pull off the device with physical access. The salt is just the chip's
+// own ID (not a secret, doesn't need to be), which is enough to stop a
+// precomputed rainbow-table lookup and to make the same password hash
+// differently across devices. This is a proportionate fix for an ESP32 with
+// no secure element; full TLS for the local config AP is a bigger job
+// (self-signed cert + client trust) and is out of scope here.
+String hashPassword(const String &password) {
+    String salted = deviceIdSuffix() + ":" + password;
+    unsigned char digest[32];
+    mbedtls_sha256((const unsigned char *)salted.c_str(), salted.length(), digest, 0 /* SHA-256, not SHA-224 */);
+    char hex[65];
+    for (int i = 0; i < 32; i++) {
+        sprintf(hex + i * 2, "%02x", digest[i]);
+    }
+    hex[64] = '\0';
+    return String(hex);
+}
+
+bool passwordMatchesHash(const String &enteredPassword, const String &storedHash) {
+    return hashPassword(enteredPassword).equalsConstantTime(storedHash);
+}
 
 struct LogEntry { String user; unsigned long atMillis; bool valid; };
 LogEntry activityLog[MAX_LOG];
@@ -77,7 +114,7 @@ void saveWifiAndAdmin(const String &ssid, const String &pass, const String &au, 
     prefs.putString("ssid", ssid);
     prefs.putString("pass", pass);
     prefs.putString("auser", au);
-    prefs.putString("apass", ap);
+    prefs.putString("apass", hashPassword(ap));
     prefs.end();
 }
 
@@ -100,7 +137,7 @@ bool addUser(const String &u, const String &p) {
     if (u.equalsIgnoreCase(adminUser)) return false;
     for (int i = 0; i < userCount; i++) if (userNames[i].equalsIgnoreCase(u)) return false;
     userNames[userCount] = u;
-    userPasses[userCount] = p;
+    userPasses[userCount] = hashPassword(p);
     userCount++;
     prefs.begin("doorlock", false);
     persistUsers();
@@ -159,13 +196,33 @@ String uptimeString() {
 }
 
 // ---------- auth ----------
-
+//
+// We only ever keep password *hashes* (see hashPassword() above), so we
+// can't use WebServer::authenticate(user, password) directly - it expects
+// the real plaintext password to compare the wire value against. Instead we
+// use its callback form: the library hands our lambda the password the
+// client actually sent (extraParams[0]) still in the clear (it just came
+// off the wire), we hash that ourselves and compare it to what's stored, and
+// on a match hand back the same string so the library's own comparison
+// against itself trivially succeeds. This mirrors how the library's own
+// authenticateBasicSHA1() helper works, just with a salted SHA-256 instead.
 String currentAuthedUser() {
-    if (adminUser.length() && server.authenticate(adminUser.c_str(), adminPass.c_str())) return adminUser;
-    for (int i = 0; i < userCount; i++) {
-        if (server.authenticate(userNames[i].c_str(), userPasses[i].c_str())) return userNames[i];
-    }
-    return "";
+    String matchedUser = "";
+    server.authenticate([&matchedUser](HTTPAuthMethod mode, String username, String extraParams[]) -> String * {
+        if (mode != BASIC_AUTH) return nullptr;
+        if (adminUser.length() && username.equalsIgnoreCase(adminUser) && passwordMatchesHash(extraParams[0], adminPass)) {
+            matchedUser = adminUser;
+            return new String(extraParams[0]);
+        }
+        for (int i = 0; i < userCount; i++) {
+            if (username.equalsIgnoreCase(userNames[i]) && passwordMatchesHash(extraParams[0], userPasses[i])) {
+                matchedUser = userNames[i];
+                return new String(extraParams[0]);
+            }
+        }
+        return nullptr;
+    });
+    return matchedUser;
 }
 
 // returns "" and already sent 401 if not authorized
@@ -176,9 +233,15 @@ String requireAuth() {
 }
 
 bool requireAdmin() {
-    if (adminUser.length() && server.authenticate(adminUser.c_str(), adminPass.c_str())) return true;
-    server.requestAuthentication(BASIC_AUTH, "Office Door Admin");
-    return false;
+    bool ok = adminUser.length() && server.authenticate([](HTTPAuthMethod mode, String username, String extraParams[]) -> String * {
+        if (mode != BASIC_AUTH) return nullptr;
+        if (username.equalsIgnoreCase(adminUser) && passwordMatchesHash(extraParams[0], adminPass)) {
+            return new String(extraParams[0]);
+        }
+        return nullptr;
+    });
+    if (!ok) server.requestAuthentication(BASIC_AUTH, "Office Door Admin");
+    return ok;
 }
 
 // ---------- shared page chrome ----------
@@ -397,6 +460,10 @@ void handleSerialCommands() {
         Serial.print(" users="); Serial.println(userCount);
         return;
     }
+    if (line == "appass") {
+        Serial.println("Setup AP password: " + apPassword);
+        return;
+    }
     if (line == "listusers") {
         Serial.println(adminUser + " (admin)");
         for (int i = 0; i < userCount; i++) Serial.println(userNames[i]);
@@ -431,19 +498,19 @@ void handleSerialCommands() {
         ESP.restart();
         return;
     }
-    Serial.println("commands: status | listusers | adduser name|pass | deluser name | resetwifi | factoryreset");
+    Serial.println("commands: status | appass | listusers | adduser name|pass | deluser name | resetwifi | factoryreset");
 }
 
 // ---------- boot ----------
 
 void startSetupMode() {
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(AP_SSID, AP_PASS);
+    WiFi.softAP(AP_SSID, apPassword.c_str());
     server.on("/", handleSetupRoot);
     server.on("/save", HTTP_POST, handleSetupSave);
     server.on("/manifest.json", handleManifest);
     server.begin();
-    Serial.println("Setup mode. Join WiFi '" AP_SSID "' (password " AP_PASS "), then visit http://192.168.4.1/");
+    Serial.println("Setup mode. Join WiFi '" AP_SSID "' (password " + apPassword + "), then visit http://192.168.4.1/");
 }
 
 const int WIFI_CONNECT_ATTEMPTS = 3;
@@ -495,6 +562,8 @@ void setup() {
     pinMode(RELAY_PIN, OUTPUT);
     digitalWrite(RELAY_PIN, LOW); // start locked
     pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);
+
+    apPassword = "door-" + deviceIdSuffix();
 
     loadConfig();
 

@@ -25,8 +25,10 @@ class SessionExpiredException implements Exception {
 
 class ApiClient {
   // Real phones can't use 127.0.0.1, so use your PC's LAN IP for testing.
-  // Change it with --dart-define=API_HOST=... for real builds.
-  static const String _lanIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.137.1');
+  // The default below is just a placeholder (a typical home-router subnet),
+  // not anyone's actual machine - override it with --dart-define=API_HOST=...
+  // (or edit the default) to match your own dev machine's current LAN IP.
+  static const String _lanIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.1.100');
   static const String _scheme = String.fromEnvironment('API_SCHEME', defaultValue: 'https');
   static const int _port = int.fromEnvironment('API_PORT', defaultValue: 8080);
 

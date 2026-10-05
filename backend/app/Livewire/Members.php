@@ -8,8 +8,10 @@ use App\Models\Member;
 use App\Models\Membership;
 use App\Models\Plan;
 use App\Models\User;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
+use App\Services\MemberCsvExporter;
+use App\Services\MemberEnrollmentService;
+use App\Services\MembershipPaymentService;
+use App\Services\MembershipRenewalService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -226,30 +228,7 @@ class Members extends Component
             $members = $members->whereIn('id', $selectedIds)->values();
         }
 
-        return response()->streamDownload(function () use ($members) {
-            $handle = fopen('php://output', 'w');
-
-            fputcsv($handle, ['Member ID', 'Name', 'Email', 'Phone', 'Plan', 'Trainer', 'Membership Ends', 'Payment Status', 'Status', 'Join Date']);
-
-            foreach ($members as $member) {
-                $membership = $member->memberships->first();
-
-                fputcsv($handle, [
-                    $member->display_code,
-                    $member->name,
-                    $member->email,
-                    $member->phone,
-                    $membership?->plan?->name,
-                    $member->trainer?->name,
-                    $membership?->end_date?->format('Y-m-d'),
-                    $membership?->payment_status,
-                    $membership?->isPaused() ? 'Paused' : (($membership?->isActive() ?? false) ? 'Active' : 'Inactive'),
-                    $member->join_date?->format('Y-m-d'),
-                ]);
-            }
-
-            fclose($handle);
-        }, 'members-'.now()->format('Y-m-d-His').'.csv', ['Content-Type' => 'text/csv']);
+        return app(MemberCsvExporter::class)->stream($members);
     }
 
     public function updatedPlanId($value): void
@@ -302,37 +281,17 @@ class Members extends Component
             return;
         }
 
-        DB::transaction(function () use ($plan, $trainerId, $paymentAmount) {
-            $member = Member::create([
-                'gym_id' => auth()->user()->gym_id,
-                'trainer_id' => $trainerId,
-                'name' => $this->name,
-                'email' => $this->email,
-                'phone' => $this->phone,
-                'password' => $this->password,
-                'join_date' => now(),
-            ]);
-
-            $membership = $member->memberships()->create([
-                'plan_id' => $plan->id,
-                'start_date' => $this->start_date,
-                'end_date' => Carbon::parse($this->start_date)->addDays($plan->duration_days),
-                'payment_status' => 'pending',
-                'price_paid' => $plan->price,
-            ]);
-
-            if ($paymentAmount > 0) {
-                $membership->payments()->create([
-                    'gym_id' => auth()->user()->gym_id,
-                    'amount' => $paymentAmount,
-                    'method' => $this->initial_payment_method,
-                    'paid_at' => now(),
-                    'note' => $this->initial_payment_note ?: null,
-                ]);
-
-                $membership->syncPaymentStatus();
-            }
-        });
+        app(MemberEnrollmentService::class)->enroll(auth()->user()->gym_id, [
+            'trainer_id' => $trainerId,
+            'name' => $this->name,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'password' => $this->password,
+            'start_date' => $this->start_date,
+            'payment_amount' => $paymentAmount,
+            'payment_method' => $this->initial_payment_method,
+            'payment_note' => $this->initial_payment_note,
+        ], $plan);
 
         ActivityLog::record('member.enrolled', "Enrolled {$this->name} on the {$plan->name} plan.");
 
@@ -383,41 +342,16 @@ class Members extends Component
 
         $member = $this->findMember($this->renewingMemberId);
         $plan = Plan::where('gym_id', auth()->user()->gym_id)->findOrFail($this->renew_plan_id);
-        $newStart = Carbon::parse($this->renew_start_date);
-        $conflicting = collect();
 
         try {
-            DB::transaction(function () use ($member, $plan, $newStart, &$conflicting) {
-                // Lock this check so two renewal submissions at once can't both
-                // pass the conflict check. An unpaid overlapping membership is
-                // likely a duplicate and gets auto-removed; a paid one is a real
-                // record, so we refuse instead of deleting it.
-                $conflicting = $member->memberships()->where('end_date', '>=', $newStart)->lockForUpdate()->get();
-
-                foreach ($conflicting as $existing) {
-                    if ($existing->amount_paid > 0) {
-                        throw new \DomainException('This member already has a paid membership running '.$existing->start_date->format('M j, Y').' – '.$existing->end_date->format('M j, Y').'. Resolve or remove that renewal before starting one on this date.');
-                    }
-                }
-
-                foreach ($conflicting as $existing) {
-                    $existing->delete();
-                }
-
-                $member->memberships()->create([
-                    'plan_id' => $plan->id,
-                    'start_date' => $this->renew_start_date,
-                    'end_date' => $newStart->copy()->addDays($plan->duration_days),
-                    'payment_status' => 'pending',
-                    'price_paid' => $plan->price,
-                ]);
-            });
+            $result = app(MembershipRenewalService::class)->renew($member, $plan, $this->renew_start_date);
         } catch (\DomainException $e) {
             $this->addError('renew_start_date', $e->getMessage());
 
             return;
         }
 
+        $conflicting = $result['removed'];
         $message = "Renewed membership for {$member->name} on the {$plan->name} plan.";
 
         if ($conflicting->isNotEmpty()) {
@@ -509,27 +443,12 @@ class Members extends Component
         ]);
 
         try {
-            $payment = DB::transaction(function () {
-                $membership = Membership::whereHas('member', fn ($q) => $q->where('gym_id', auth()->user()->gym_id))
-                    ->lockForUpdate()
-                    ->findOrFail($this->recordingPaymentFor);
-
-                if ((float) $this->payment_amount > $membership->balance_due + 0.01) {
-                    throw new \DomainException('Amount exceeds the remaining balance of '.number_format($membership->balance_due, 2).'.');
-                }
-
-                $payment = $membership->payments()->create([
-                    'gym_id' => auth()->user()->gym_id,
-                    'amount' => $this->payment_amount,
-                    'method' => $this->payment_method,
-                    'paid_at' => $this->payment_date,
-                    'note' => $this->payment_note ?: null,
-                ]);
-
-                $membership->syncPaymentStatus();
-
-                return $payment;
-            });
+            $payment = app(MembershipPaymentService::class)->record($this->recordingPaymentFor, auth()->user()->gym_id, [
+                'amount' => $this->payment_amount,
+                'method' => $this->payment_method,
+                'paid_at' => $this->payment_date,
+                'note' => $this->payment_note,
+            ]);
         } catch (\DomainException $e) {
             $this->addError('payment_amount', $e->getMessage());
 

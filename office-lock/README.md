@@ -18,8 +18,11 @@ dependency at all: point a phone browser at it and it just works.
 
 1. Flash with PlatformIO (`pio run -t upload`).
 2. On first boot (or after a factory reset) the device has no saved WiFi, so
-   it starts its own access point: join **OfficeDoor-Setup** (password
-   `setup1234`) from a phone or laptop.
+   it starts its own access point: **OfficeDoor-Setup**. Its password is
+   generated per device (`door-` plus a 6-character code from the chip's own
+   ID, e.g. `door-3FA9C2`), not a fixed string shared by every unit - read it
+   off the USB serial console at boot (115200 baud), or send `appass` over
+   serial at any time to print it again.
 3. Visit `http://192.168.4.1/` and fill in the office WiFi credentials plus
    an admin username/password. WiFi must be 2.4GHz — the ESP32 cannot join
    5GHz networks.
@@ -44,6 +47,7 @@ commands as a fallback if the network side is unreachable:
 
 ```
 status                  # WiFi/heap/user-count snapshot
+appass                  # reprint this device's setup AP password
 listusers
 adduser name|password
 deluser name
@@ -54,7 +58,15 @@ factoryreset
 ## Notes
 
 - All config (WiFi, admin login, user list) is stored in the ESP32's flash
-  (`Preferences`) and survives power loss/reboots.
-- Change the default setup AP password (`AP_PASS` in `src/main.cpp`) if the
-  office network is somewhere physically accessible to the public during
-  the setup window.
+  (`Preferences`) and survives power loss/reboots. Login passwords (admin and
+  per-user) are stored as a salted SHA-256 hash, never plaintext - only the
+  office WiFi password is kept plaintext, since the device needs it back to
+  join the network.
+- The setup AP password is derived per device from its chip ID (see
+  `deviceIdSuffix()` in `src/main.cpp`) instead of a fixed string, so reading
+  it off one unit doesn't give access to another.
+- Both the setup AP and the day-to-day admin page are plain HTTP - fine for a
+  private office LAN, but there's no transport encryption. Full TLS for a
+  device that's also its own captive portal (self-signed cert, client trust
+  prompts) is a bigger job than this firmware takes on; hashing at rest is
+  the practical fix here.

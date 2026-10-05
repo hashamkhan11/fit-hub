@@ -7,6 +7,7 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <Adafruit_Fingerprint.h>
+#include <time.h>
 
 // --- Relay wiring: DO NOT flip this. New PCB, GPIO25 to relay IN. Confirmed working 2026-08-18 (see relay test sketch). ---
 // HIGH = unlock, LOW = locked (this is also the boot-default state).
@@ -24,9 +25,59 @@ const unsigned long APP_UNLOCK_PULSE_MS = 2000; // how long an app-triggered unl
 const unsigned long POLL_INTERVAL_MS = 1000;   // how often we ask the server for commands
 const unsigned long WIFI_CONNECT_TIMEOUT_MS = 20000;
 
+// Root CA for the FitHub backend (fithub.ranksol.net), which is issued by
+// Let's Encrypt. We pin the long-lived self-signed root (ISRG Root X1,
+// valid until Jun 2035) rather than the leaf or intermediate certs, since
+// those rotate every ~90 days and would brick every device's TLS the next
+// time the backend renews. mbedtls will still walk and validate the full
+// chain the server presents (leaf -> intermediate -> this root) against it.
+// Re-fetch this if the backend ever moves off Let's Encrypt:
+//   openssl s_client -connect fithub.ranksol.net:443 -showcerts
+const char *FITHUB_ROOT_CA PROGMEM = R"EOF(
+-----BEGIN CERTIFICATE-----
+MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw
+TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh
+cmNoIEdyb3VwMRUwEwYDVQQDEwxJU1JHIFJvb3QgWDEwHhcNMTUwNjA0MTEwNDM4
+WhcNMzUwNjA0MTEwNDM4WjBPMQswCQYDVQQGEwJVUzEpMCcGA1UEChMgSW50ZXJu
+ZXQgU2VjdXJpdHkgUmVzZWFyY2ggR3JvdXAxFTATBgNVBAMTDElTUkcgUm9vdCBY
+MTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAK3oJHP0FDfzm54rVygc
+h77ct984kIxuPOZXoHj3dcKi/vVqbvYATyjb3miGbESTtrFj/RQSa78f0uoxmyF+
+0TM8ukj13Xnfs7j/EvEhmkvBioZxaUpmZmyPfjxwv60pIgbz5MDmgK7iS4+3mX6U
+A5/TR5d8mUgjU+g4rk8Kb4Mu0UlXjIB0ttov0DiNewNwIRt18jA8+o+u3dpjq+sW
+T8KOEUt+zwvo/7V3LvSye0rgTBIlDHCNAymg4VMk7BPZ7hm/ELNKjD+Jo2FR3qyH
+B5T0Y3HsLuJvW5iB4YlcNHlsdu87kGJ55tukmi8mxdAQ4Q7e2RCOFvu396j3x+UC
+B5iPNgiV5+I3lg02dZ77DnKxHZu8A/lJBdiB3QW0KtZB6awBdpUKD9jf1b0SHzUv
+KBds0pjBqAlkd25HN7rOrFleaJ1/ctaJxQZBKT5ZPt0m9STJEadao0xAH0ahmbWn
+OlFuhjuefXKnEgV4We0+UXgVCwOPjdAvBbI+e0ocS3MFEvzG6uBQE3xDk3SzynTn
+jh8BCNAw1FtxNrQHusEwMFxIt4I7mKZ9YIqioymCzLq9gwQbooMDQaHWBfEbwrbw
+qHyGO0aoSCqI3Haadr8faqU9GY/rOPNk3sgrDQoo//fb4hVC1CLQJ13hef4Y53CI
+rU7m2Ys6xt0nUW7/vGT1M0NPAgMBAAGjQjBAMA4GA1UdDwEB/wQEAwIBBjAPBgNV
+HRMBAf8EBTADAQH/MB0GA1UdDgQWBBR5tFnme7bl5AFzgAiIyBpY9umbbjANBgkq
+hkiG9w0BAQsFAAOCAgEAVR9YqbyyqFDQDLHYGmkgJykIrGF1XIpu+ILlaS/V9lZL
+ubhzEFnTIZd+50xx+7LSYK05qAvqFyFWhfFQDlnrzuBZ6brJFe+GnY+EgPbk6ZGQ
+3BebYhtF8GaV0nxvwuo77x/Py9auJ/GpsMiu/X1+mvoiBOv/2X/qkSsisRcOj/KK
+NFtY2PwByVS5uCbMiogziUwthDyC3+6WVwW6LLv3xLfHTjuCvjHIInNzktHCgKQ5
+ORAzI4JMPJ+GslWYHb4phowim57iaztXOoJwTdwJx4nLCgdNbOhdjsnvzqvHu7Ur
+TkXWStAmzOVyyghqpZXjFaH3pO3JLF+l+/+sKAIuvtd7u+Nxe5AW0wdeRlN8NwdC
+jNPElpzVmbUq4JUagEiuTDkHzsxHpFKVK7q4+63SM1N95R1NbdWhscdCb+ZAJzVc
+oyi3B43njTOQ5yOf+1CceWxG1bQVs5ZufpsMljq4Ui0/1lvh+wjChP4kqKOJ2qxq
+4RgqsahDYVvTH9w7jXbyLeiNdd8XM2w9U/t7y0Ff/9yi0GE44Za4rF2LN9d11TPA
+mRGunUHBcnWEvgJBQl9nJEiU0Zsnvgc/ubhPgXRR4Xq37Z0j4r7g1SgEEzwxA57d
+emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=
+-----END CERTIFICATE-----
+)EOF";
+
+// Manual relay test page (bypasses backend polling entirely) for bench-testing
+// the door hardware before a device is enrolled with a gym. It has no
+// authentication, so it must never ship in firmware flashed onto a real
+// door - build with `-D ENABLE_TEST_UNLOCK_SERVER` (see platformio.ini) only
+// when you're on a bench with the device on an isolated test WiFi.
+
 Preferences prefs;
 WebServer setupServer(80);
-WebServer testServer(81); // temporary manual relay test page, bypasses backend polling
+#ifdef ENABLE_TEST_UNLOCK_SERVER
+WebServer testServer(81);
+#endif
 
 HardwareSerial fingerSerial(2);
 Adafruit_Fingerprint finger(&fingerSerial);
@@ -203,6 +254,25 @@ void startSetupMode() {
 
 // ---------- normal mode: WiFi + polling ----------
 
+// setCACert() validates the server cert's notBefore/notAfter dates, and the
+// ESP32's clock boots at the epoch, so without this every HTTPS request
+// would fail with "certificate not yet valid" until something else happened
+// to set the clock. A few seconds of best-effort NTP sync is enough - if it
+// doesn't land in time, pollServer()/ackCommand() will just log an HTTPS
+// failure and retry on the next cycle once time has synced in the background.
+void syncTimeForTls() {
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    Serial.print("Syncing time for TLS");
+    time_t now = time(nullptr);
+    unsigned long start = millis();
+    while (now < 8 * 3600 * 2 && millis() - start < 8000) {
+        delay(250);
+        Serial.print(".");
+        now = time(nullptr);
+    }
+    Serial.println();
+}
+
 bool connectWifi() {
     WiFi.mode(WIFI_STA);
     WiFi.begin(savedSsid.c_str(), savedPass.c_str());
@@ -213,7 +283,11 @@ bool connectWifi() {
         Serial.print(".");
     }
     Serial.println();
-    return WiFi.status() == WL_CONNECTED;
+    bool connected = WiFi.status() == WL_CONNECTED;
+    if (connected) {
+        syncTimeForTls();
+    }
+    return connected;
 }
 
 void openLock() {
@@ -223,6 +297,7 @@ void openLock() {
 
 void closeLock();
 
+#ifdef ENABLE_TEST_UNLOCK_SERVER
 void handleTestRoot() {
     testServer.send(200, "text/html",
         "<html><body style='font-family:Arial;text-align:center;padding-top:60px;background:#111;color:#eee'>"
@@ -242,6 +317,7 @@ void handleTestUnlock() {
     delay(1000);
     closeLock();
 }
+#endif
 
 void closeLock() {
     digitalWrite(RELAY_PIN, LOW);
@@ -257,7 +333,7 @@ void pulseUnlock() {
 
 bool beginHttp(HTTPClient &http, WiFiClientSecure &secureClient, WiFiClient &plainClient, const String &url) {
     if (savedServerUrl.startsWith("https://")) {
-        secureClient.setInsecure(); // no cert pinning yet; fine for now, revisit once the production domain is fixed
+        secureClient.setCACert(FITHUB_ROOT_CA);
         return http.begin(secureClient, url);
     }
     return http.begin(plainClient, url);
@@ -747,17 +823,21 @@ void setup() {
     Serial.println(WiFi.localIP());
     Serial.println("Ready - polling server for lock commands.");
 
+#ifdef ENABLE_TEST_UNLOCK_SERVER
     testServer.on("/", handleTestRoot);
     testServer.on("/unlock", HTTP_POST, handleTestUnlock);
     testServer.begin();
     Serial.print("Manual relay test page: http://");
     Serial.print(WiFi.localIP());
     Serial.println(":81/");
+#endif
 }
 
 void loop() {
     handleSerialCommands();
+#ifdef ENABLE_TEST_UNLOCK_SERVER
     testServer.handleClient();
+#endif
 
     if (enrollState != ENROLL_NONE) {
         updateEnroll(); // enrollment owns the sensor - don't also run door-entry matching

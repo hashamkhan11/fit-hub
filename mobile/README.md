@@ -42,7 +42,7 @@ The Google Services Gradle plugin is already wired up in `android/settings.gradl
 The API base URL is defined in `lib/services/api_client.dart`:
 
 ```dart
-static const String _lanIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.137.1');
+static const String _lanIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.1.100');
 ```
 
 - Running on a physical Android device: the app uses `http://<_lanIp>:8080/api`. Update the default in `api_client.dart`, or pass `--dart-define=API_HOST=...`, to match your development machine's current LAN IP (find it with `ipconfig` on Windows).
