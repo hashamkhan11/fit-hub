@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Whitelists cleartext (http) traffic for local dev only. Must match
+  ApiClient's default API_HOST in mobile/lib/services/api_client.dart —
+  if you override API_HOST at build time for a different network, add that
+  IP here too. A staging/production build should point at a real HTTPS host
+  instead, which needs no entry here at all.
+-->
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">192.168.197.74</domain>
+        <domain includeSubdomains="false">192.168.137.1</domain>
         <domain includeSubdomains="false">10.0.2.2</domain>
     </domain-config>
 </network-security-config>

@@ -7,7 +7,7 @@
         * { box-sizing: border-box; }
         body {
             font-family: 'DejaVu Sans', 'Helvetica Neue', Arial, sans-serif;
-            color: #101826;
+            color: #1A1E23;
             margin: 0;
             padding: 32px;
             font-size: 13px;
@@ -18,10 +18,10 @@
         .head-logo img { width: 56px; height: 56px; object-fit: contain; }
         .head-biz { display: table-cell; vertical-align: top; padding-left: 12px; }
         .biz-name { font-size: 19px; font-weight: 700; letter-spacing: 0.02em; margin: 0 0 4px; }
-        .biz-line { font-size: 11px; color: #5B6472; line-height: 1.5; }
-        .divider { border: none; border-top: 2px solid #101826; margin: 16px 0; }
-        .divider-light { border: none; border-top: 1px solid #D9D9D4; margin: 14px 0; }
-        .eyebrow { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #8891A0; margin: 0 0 2px; }
+        .biz-line { font-size: 11px; color: #565F6A; line-height: 1.5; }
+        .divider { border: none; border-top: 2px solid #1A1E23; margin: 16px 0; }
+        .divider-light { border: none; border-top: 1px solid #D8DCE1; margin: 14px 0; }
+        .eyebrow { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #8D96A0; margin: 0 0 2px; }
         .title-row { display: table; width: 100%; margin-bottom: 4px; }
         .title-row .t { display: table-cell; }
         .title-row .r { display: table-cell; text-align: right; }
@@ -29,19 +29,19 @@
         .receipt-no { font-family: 'DejaVu Sans Mono', monospace; font-size: 12px; }
         table.rows { width: 100%; border-collapse: collapse; margin: 16px 0; }
         table.rows td { padding: 5px 0; font-size: 12.5px; vertical-align: top; }
-        table.rows td.label { color: #5B6472; width: 45%; }
+        table.rows td.label { color: #565F6A; width: 45%; }
         table.rows td.value { text-align: right; font-weight: 600; }
-        .amount-box { background: #F4F5F1; border: 1px solid #D9D9D4; border-radius: 4px; padding: 14px 16px; margin: 18px 0; }
+        .amount-box { background: #F2F4F6; border: 1px solid #D8DCE1; border-radius: 6px; padding: 14px 16px; margin: 18px 0; }
         .amount-row { display: table; width: 100%; }
-        .amount-row .l { display: table-cell; font-size: 12px; color: #5B6472; text-transform: uppercase; letter-spacing: 0.06em; vertical-align: middle; }
+        .amount-row .l { display: table-cell; font-size: 12px; color: #565F6A; text-transform: uppercase; letter-spacing: 0.06em; vertical-align: middle; }
         .amount-row .v { display: table-cell; text-align: right; font-size: 22px; font-weight: 700; vertical-align: middle; }
-        .balance-note { font-size: 11px; color: #B23A2E; margin-top: 6px; text-align: right; }
-        .footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8891A0; line-height: 1.6; }
+        .balance-note { font-size: 11px; color: #D64545; margin-top: 6px; text-align: right; }
+        .footer { margin-top: 24px; text-align: center; font-size: 11px; color: #8D96A0; line-height: 1.6; }
         .print-bar { max-width: 420px; margin: 0 auto 16px; text-align: right; }
         .print-btn {
             display: inline-block; font-family: Arial, sans-serif; font-size: 12px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 16px; border-radius: 3px;
-            background: #D9A441; color: #101826; text-decoration: none; border: none; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 16px; border-radius: 6px;
+            background: #22B0AB; color: #FFFFFF; text-decoration: none; border: none; cursor: pointer;
         }
         @media print {
             .print-bar { display: none; }

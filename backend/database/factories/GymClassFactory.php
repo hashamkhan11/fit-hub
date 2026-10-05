@@ -3,10 +3,11 @@
 namespace Database\Factories;
 
 use App\Models\Gym;
+use App\Models\GymClass;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\GymClass>
+ * @extends Factory<GymClass>
  */
 class GymClassFactory extends Factory
 {

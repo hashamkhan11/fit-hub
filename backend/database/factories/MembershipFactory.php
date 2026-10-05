@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Member;
+use App\Models\Membership;
 use App\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Membership>
+ * @extends Factory<Membership>
  */
 class MembershipFactory extends Factory
 {

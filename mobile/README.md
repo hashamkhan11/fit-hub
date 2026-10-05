@@ -42,24 +42,26 @@ The Google Services Gradle plugin is already wired up in `android/settings.gradl
 The API base URL is defined in `lib/services/api_client.dart`:
 
 ```dart
-static const String _lanIp = '192.168.197.74';
+static const String _lanIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.137.1');
 ```
 
-- Running on a physical Android device: the app uses `http://<_lanIp>:8000/api`. Update `_lanIp` to your development machine's current LAN IP (find it with `ipconfig` on Windows).
-- Running on Android emulator/web: it falls back to `http://127.0.0.1:8000/api` automatically.
+- Running on a physical Android device: the app uses `http://<_lanIp>:8080/api`. Update the default in `api_client.dart`, or pass `--dart-define=API_HOST=...`, to match your development machine's current LAN IP (find it with `ipconfig` on Windows).
+- Running on Android emulator/web: it falls back to `http://127.0.0.1:8080/api` automatically.
 
-Make sure the backend is running with `php artisan serve --host=0.0.0.0 --port=8000` so it's reachable from the phone, not just the host machine.
+Make sure the backend is running and reachable on port 8080 (Laragon/Apache on this project — not `php artisan serve`) from the phone, not just the host machine.
 
 ### 4. Run
 
+The app defaults to **HTTPS** (fail-safe for production). Local dev against Laragon/Apache is HTTP-only, so pass the scheme override explicitly:
+
 ```bash
-flutter run
+flutter run --dart-define=API_SCHEME=http
 ```
 
 Or build a debug APK to install manually:
 
 ```bash
-flutter build apk --debug
+flutter build apk --debug --dart-define=API_SCHEME=http
 ```
 
 The APK is output to `build/app/outputs/flutter-apk/app-debug.apk`.
@@ -69,6 +71,16 @@ The APK is output to `build/app/outputs/flutter-apk/app-debug.apk`.
 The app requests the `POST_NOTIFICATIONS` runtime permission on first login (in addition to the manifest declaration already in `AndroidManifest.xml`). Notifications from a backgrounded/terminated app show in the system tray automatically via FCM. For the foreground case — FCM notification payloads never auto-display while the app is open — `initPushNotifications()` in `push_notifications.dart` listens on `FirebaseMessaging.onMessage` and shows the notification manually via `flutter_local_notifications`.
 
 `flutter_local_notifications` requires Android core library desugaring; this is already enabled in `android/app/build.gradle.kts` (`isCoreLibraryDesugaringEnabled = true` + the `desugar_jdk_libs` dependency) — don't remove it or release builds will fail with a "requires core library desugaring" AAR metadata error.
+
+### Production release build
+
+The app has no compiled-in production URL — without `API_BASE_URL`, it falls back to a LAN dev IP that is unreachable off your home network. Every release build (AAB for Play Store, or a release APK) **must** pass the live backend URL explicitly:
+
+```bash
+flutter build appbundle --release --dart-define=API_BASE_URL=https://fithub.ranksol.net/api
+```
+
+There is no default for this on purpose — a forgotten flag should fail loudly (app can't reach anything, caught in testing) rather than silently shipping a dev IP to real users.
 
 ## Testing
 

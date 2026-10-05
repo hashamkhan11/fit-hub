@@ -49,6 +49,12 @@ class Staff extends Component
 
         $this->validate();
 
+        if (! auth()->user()->gym->canAddStaff()) {
+            $this->addError('email', 'This gym has reached its staff limit for its current subscription plan.');
+
+            return;
+        }
+
         User::create([
             'gym_id' => auth()->user()->gym_id,
             'name' => $this->name,

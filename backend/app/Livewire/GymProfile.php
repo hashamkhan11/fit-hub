@@ -38,7 +38,7 @@ class GymProfile extends Component
     #[Validate('nullable|string|max:500')]
     public string $receipt_footer = '';
 
-    #[Validate('nullable|image|max:6144')]
+    #[Validate('nullable|image|mimes:jpg,jpeg,png,webp|max:6144')]
     public $logo = null;
 
     public bool $saved = false;

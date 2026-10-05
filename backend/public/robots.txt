@@ -1,2 +1,10 @@
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /dashboard
+Disallow: /platform
+Disallow: /start-trial
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: /sitemap.xml

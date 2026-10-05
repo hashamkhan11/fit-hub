@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Gym;
+use App\Models\Measurement;
 use App\Models\Member;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Measurement>
+ * @extends Factory<Measurement>
  */
 class MeasurementFactory extends Factory
 {

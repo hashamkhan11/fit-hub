@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Twilio\Rest\Client;
 
 /**
- * Sends via Twilio once TWILIO_SID/TWILIO_AUTH_TOKEN/TWILIO_FROM_NUMBER are set
- * in .env (the company's paid account isn't plugged in yet). Until then, falls
- * back to logging what would have been sent so callers work unchanged either way.
+ * Sends SMS via Twilio if it's set up in .env, else just logs the message.
  */
 class SmsService
 {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../widgets/page_header.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -52,70 +53,80 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Forgot Password')),
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: RadialGradient(
             center: Alignment(0, -0.6),
             radius: 1.1,
-            colors: [AppColors.ink2, AppColors.ink],
+            colors: [AppColors.ink2, AppColors.paper2],
           ),
         ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'We\'ll send a 6-digit code to verify it\'s you.',
-                    style: AppTheme.display(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.steel2),
-                  ),
-                  const SizedBox(height: 20),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'email', label: Text('Email')),
-                      ButtonSegment(value: 'phone', label: Text('Phone')),
-                    ],
-                    selected: {_channel},
-                    onSelectionChanged: (selection) {
-                      setState(() {
-                        _channel = selection.first;
-                        _identifierController.clear();
-                        _error = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _identifierController,
-                    decoration: InputDecoration(
-                      labelText: _channel == 'email' ? 'Email' : 'Phone number',
-                    ),
-                    keyboardType: _channel == 'email' ? TextInputType.emailAddress : TextInputType.phone,
-                    style: const TextStyle(color: AppColors.chalk),
-                  ),
-                  const SizedBox(height: 24),
-                  if (_error != null) ...[
-                    Text(_error!, style: const TextStyle(color: AppColors.tape)),
-                    const SizedBox(height: 16),
-                  ],
-                  FilledButton(
-                    onPressed: _loading ? null : _submit,
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.ink),
-                          )
-                        : const Text('SEND CODE'),
-                  ),
-                ],
+        child: SafeArea(
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: PageHeader(title: 'Forgot Password'),
               ),
-            ),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 360),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'We\'ll send a 6-digit code to verify it\'s you.',
+                            style: AppTheme.display(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.steel),
+                          ),
+                          const SizedBox(height: 20),
+                          SegmentedButton<String>(
+                            segments: const [
+                              ButtonSegment(value: 'email', label: Text('Email')),
+                              ButtonSegment(value: 'phone', label: Text('Phone')),
+                            ],
+                            selected: {_channel},
+                            onSelectionChanged: (selection) {
+                              setState(() {
+                                _channel = selection.first;
+                                _identifierController.clear();
+                                _error = null;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          TextField(
+                            controller: _identifierController,
+                            decoration: InputDecoration(
+                              labelText: _channel == 'email' ? 'Email' : 'Phone number',
+                            ),
+                            keyboardType: _channel == 'email' ? TextInputType.emailAddress : TextInputType.phone,
+                          ),
+                          const SizedBox(height: 24),
+                          if (_error != null) ...[
+                            Text(_error!, style: AppTheme.body(color: AppColors.tape)),
+                            const SizedBox(height: 16),
+                          ],
+                          FilledButton(
+                            onPressed: _loading ? null : _submit,
+                            child: _loading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.voidBg),
+                                  )
+                                : const Text('SEND CODE'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -204,75 +215,84 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final destination = widget.channel == 'email' ? 'email' : 'phone';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Enter Code')),
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: RadialGradient(
             center: Alignment(0, -0.6),
             radius: 1.1,
-            colors: [AppColors.ink2, AppColors.ink],
+            colors: [AppColors.ink2, AppColors.paper2],
           ),
         ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Enter the 6-digit code sent to your $destination and choose a new password.',
-                    style: AppTheme.display(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.steel2),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _otpController,
-                    decoration: const InputDecoration(labelText: 'Code'),
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    style: const TextStyle(color: AppColors.chalk, letterSpacing: 4),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'New password'),
-                    obscureText: true,
-                    style: const TextStyle(color: AppColors.chalk),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _confirmController,
-                    decoration: const InputDecoration(labelText: 'Confirm password'),
-                    obscureText: true,
-                    style: const TextStyle(color: AppColors.chalk),
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _resending ? null : _resend,
-                      child: Text(_resending ? 'RESENDING…' : 'RESEND CODE'),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: PageHeader(title: 'Enter Code'),
+              ),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 360),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Enter the 6-digit code sent to your $destination and choose a new password.',
+                            style: AppTheme.display(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.steel),
+                          ),
+                          const SizedBox(height: 20),
+                          TextField(
+                            controller: _otpController,
+                            decoration: const InputDecoration(labelText: 'Code'),
+                            keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            style: AppTheme.mono(letterSpacing: 4),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _passwordController,
+                            decoration: const InputDecoration(labelText: 'New password'),
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: _confirmController,
+                            decoration: const InputDecoration(labelText: 'Confirm password'),
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _resending ? null : _resend,
+                              child: Text(_resending ? 'RESENDING…' : 'RESEND CODE'),
+                            ),
+                          ),
+                          if (_error != null) ...[
+                            Text(_error!, style: AppTheme.body(color: AppColors.tape)),
+                            const SizedBox(height: 16),
+                          ],
+                          FilledButton(
+                            onPressed: _loading ? null : _submit,
+                            child: _loading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.voidBg),
+                                  )
+                                : const Text('RESET PASSWORD'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  if (_error != null) ...[
-                    Text(_error!, style: const TextStyle(color: AppColors.tape)),
-                    const SizedBox(height: 16),
-                  ],
-                  FilledButton(
-                    onPressed: _loading ? null : _submit,
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.ink),
-                          )
-                        : const Text('RESET PASSWORD'),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

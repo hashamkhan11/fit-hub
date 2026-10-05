@@ -25,6 +25,8 @@ class Plans extends Component
 
     public bool $is_active = true;
 
+    public bool $showForm = false;
+
     public function mount(): void
     {
         Gate::authorize('view-plans');
@@ -61,6 +63,12 @@ class Plans extends Component
         $this->resetForm();
     }
 
+    public function createNew(): void
+    {
+        $this->resetForm();
+        $this->showForm = true;
+    }
+
     public function edit(int $planId): void
     {
         Gate::authorize('manage-plans');
@@ -72,6 +80,7 @@ class Plans extends Component
         $this->duration_days = $plan->duration_days;
         $this->price = $plan->price;
         $this->is_active = $plan->is_active;
+        $this->showForm = true;
     }
 
     public function delete(int $planId): void
@@ -94,7 +103,7 @@ class Plans extends Component
 
     public function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'duration_days', 'price', 'is_active']);
+        $this->reset(['editingId', 'name', 'duration_days', 'price', 'is_active', 'showForm']);
         $this->is_active = true;
         $this->duration_days = 30;
     }

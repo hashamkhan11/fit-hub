@@ -17,8 +17,7 @@ class WelcomeGymOwnerMail extends Mailable
         public Gym $gym,
         public string $ownerEmail,
         public string $temporaryPassword,
-    ) {
-    }
+    ) {}
 
     public function envelope(): Envelope
     {

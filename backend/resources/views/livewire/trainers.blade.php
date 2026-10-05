@@ -67,15 +67,15 @@
             </thead>
             <tbody>
                 @forelse ($trainers as $trainer)
-                    <tr>
+                    <tr class="fh-tr">
                         <td class="fh-td font-medium">{{ $trainer->name }}</td>
                         <td class="fh-td text-steel">{{ $trainer->email }}</td>
                         <td class="fh-td-mono">{{ $trainer->members_count }}</td>
                         <td class="fh-td flex gap-3">
-                            <button wire:click="startEdit({{ $trainer->id }})" class="fh-link-action text-gold-2">Edit</button>
+                            <button wire:click="startEdit({{ $trainer->id }})" class="fh-link-action text-gold-3">Edit</button>
                             <button
-                                wire:click="deleteTrainer({{ $trainer->id }})"
-                                wire:confirm="Delete {{ $trainer->name }}? Members assigned to them will become unassigned."
+                                type="button"
+                                x-on:click="$store.confirmModal.show({ message: 'Delete ' + @js($trainer->name) + '? Members assigned to them will become unassigned.', danger: true, confirmLabel: 'Delete', onConfirm: () => $wire.deleteTrainer({{ $trainer->id }}) })"
                                 class="fh-link-action text-tape"
                             >Delete</button>
                         </td>

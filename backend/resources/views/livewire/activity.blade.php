@@ -12,10 +12,10 @@
                 </thead>
                 <tbody>
                     @forelse ($logs as $log)
-                        <tr>
+                        <tr class="fh-tr">
                             <td class="fh-td-mono whitespace-nowrap">{{ $log->created_at->format('M j, Y g:i A') }}</td>
                             <td class="fh-td">{{ $log->user->name ?? 'Deleted user' }}</td>
-                            <td class="fh-td font-mono text-xs text-steel-2">{{ $log->action }}</td>
+                            <td class="fh-td font-mono text-xs text-steel">{{ $log->action }}</td>
                             <td class="fh-td">{{ $log->description }}</td>
                         </tr>
                     @empty

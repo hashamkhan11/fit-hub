@@ -1,96 +1,217 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* "Redline" identity — self-hosted variable webfonts (no CDN). Each file
+   covers its full weight range, so a single @font-face per family with a
+   `font-weight` range is enough for every weight utility used in the app. */
+@font-face {
+    font-family: 'Bricolage Grotesque';
+    src: url('/fonts/BricolageGrotesque-Variable.woff2') format('woff2-variations');
+    font-weight: 200 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    src: url('/fonts/PlusJakartaSans-Variable.woff2') format('woff2-variations');
+    font-weight: 200 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('/fonts/JetBrainsMono-Variable.woff2') format('woff2-variations');
+    font-weight: 200 800;
+    font-style: normal;
+    font-display: swap;
+}
+
 @layer base {
     body {
-        @apply bg-chalk text-ink font-sans;
+        @apply bg-void text-ink font-sans;
+        background-image: radial-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px);
+        background-size: 22px 22px;
+    }
+
+    /* Zebra-striped data tables everywhere (fh-* and pf-*) — targets the
+       element rather than a class so it applies uniformly regardless of
+       which td variant (fh-td / fh-td-mono / pf-td / pf-td-mono) is used. */
+    tbody tr:nth-child(even) td {
+        @apply bg-chalk-2;
     }
 }
 
 @layer components {
     .fh-eyebrow {
-        @apply font-display uppercase tracking-wide text-xs text-steel;
+        @apply font-mono uppercase tracking-[0.12em] text-xs text-steel;
     }
     .fh-card {
-        @apply bg-white border border-chalk-2 rounded p-6;
+        @apply bg-chalk border border-chalk-3 rounded-lg shadow-fh-card p-6 transition hover:shadow-fh-lift hover:-translate-y-0.5;
     }
     .fh-card-flush {
-        @apply bg-white border border-chalk-2 rounded;
+        @apply bg-chalk border border-chalk-3 rounded-lg shadow-fh-card;
     }
     .fh-heading {
-        @apply font-display font-semibold uppercase tracking-wide text-ink;
+        @apply font-display font-semibold tracking-tight text-ink;
     }
     .fh-label {
         @apply fh-eyebrow block mb-1;
     }
     .fh-input {
-        @apply w-full border border-steel/30 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold transition;
+        @apply w-full border border-chalk-3 rounded px-3 py-2 text-sm bg-chalk-2 text-ink placeholder:text-steel-2 focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold transition;
     }
     .fh-error {
         @apply text-tape text-sm mt-1;
     }
     .fh-btn-primary {
-        @apply inline-flex items-center justify-center gap-2 bg-gradient-to-br from-gold to-gold-2 text-ink font-display font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded hover:brightness-105 active:brightness-95 transition disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-2 bg-gold text-void font-mono font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded shadow-fh-glow hover:brightness-110 active:brightness-95 transition disabled:opacity-50 disabled:pointer-events-none;
     }
     .fh-btn-secondary {
-        @apply inline-flex items-center justify-center gap-2 border border-steel/30 text-ink font-display font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded hover:bg-chalk transition;
+        @apply inline-flex items-center justify-center gap-2 bg-transparent border border-chalk-3 text-ink font-mono font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded hover:bg-chalk-2 hover:border-steel-2 transition disabled:opacity-50 disabled:pointer-events-none;
+    }
+    .fh-btn-danger {
+        @apply inline-flex items-center justify-center gap-2 bg-tape text-void font-mono font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded hover:brightness-110 active:brightness-95 transition disabled:opacity-50 disabled:pointer-events-none;
     }
     .fh-link-action {
-        @apply font-display uppercase tracking-wide text-xs font-semibold;
+        @apply font-mono uppercase tracking-wide text-xs font-semibold;
     }
     .fh-menu-item {
-        @apply block w-full text-left px-3 py-2 text-sm text-ink hover:bg-chalk transition disabled:opacity-40 disabled:pointer-events-none;
+        @apply block w-full text-left px-3 py-2 text-sm text-ink hover:bg-chalk-2 transition disabled:opacity-40 disabled:pointer-events-none;
     }
     .fh-th {
-        @apply text-left fh-eyebrow p-3 border-b border-chalk-2;
+        @apply text-left font-mono text-[11px] uppercase tracking-[0.1em] text-steel p-3 border-b border-chalk-3;
     }
     .fh-td {
-        @apply p-3 border-b border-chalk-2 text-sm;
+        @apply p-3 border-b border-chalk-3 text-sm text-ink;
     }
     .fh-td-mono {
-        @apply fh-td font-mono whitespace-nowrap;
+        @apply fh-td font-mono whitespace-nowrap tabular-nums;
+    }
+    .fh-tr {
+        @apply transition even:bg-chalk-2/40 hover:bg-chalk-2;
     }
     .fh-pill {
-        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full;
+        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wide;
     }
     .fh-pill-good {
-        @apply fh-pill bg-turf/10 text-turf before:bg-turf;
+        @apply fh-pill bg-turf-soft text-turf;
     }
     .fh-pill-warn {
-        @apply fh-pill bg-gold/15 text-gold-2 before:bg-gold-2;
+        @apply fh-pill bg-warn-soft text-warn;
     }
     .fh-pill-bad {
-        @apply fh-pill bg-tape/10 text-tape before:bg-tape;
+        @apply fh-pill bg-tape-soft text-tape;
     }
     .fh-pill-neutral {
-        @apply fh-pill bg-steel/10 text-steel before:bg-steel;
+        @apply fh-pill bg-steel-soft text-steel;
     }
     .fh-stat-value {
-        @apply font-mono text-3xl font-semibold tracking-tight;
+        @apply font-mono text-3xl font-bold tracking-tight tabular-nums text-ink;
+    }
+    .fh-stat-delta-up {
+        @apply inline-flex items-center gap-0.5 text-turf text-xs font-mono font-semibold;
+    }
+    .fh-stat-delta-down {
+        @apply inline-flex items-center gap-0.5 text-tape text-xs font-mono font-semibold;
+    }
+    .fh-avatar {
+        @apply inline-flex items-center justify-center rounded-full bg-gold-soft text-gold font-display font-semibold shrink-0 overflow-hidden object-cover;
+    }
+    .fh-banner-success {
+        @apply mb-4 px-3 py-2 rounded border border-turf/30 bg-turf-soft text-turf text-sm font-mono font-semibold uppercase tracking-wide;
+    }
+    .fh-month-nav-btn {
+        @apply w-6 h-6 inline-flex items-center justify-center rounded border border-chalk-3 text-ink text-sm leading-none hover:bg-chalk-2 hover:border-steel-2 transition disabled:opacity-30 disabled:pointer-events-none;
     }
 
-    /* RankSol platform panel — deliberately distinct from the fh-* gym brand */
+    /* Shared sidebar/nav chrome — used by both the desktop floating-glass
+       sidebar (fh-nav-link) and the mobile horizontal pill scroller
+       (fh-nav-pill), across both the fh-* gym app and the pf-* platform panel. */
+    .fh-nav-link {
+        @apply flex items-center gap-3 px-3 py-2 rounded font-mono text-sm tracking-wide border border-transparent text-steel-2 transition hover:text-ink hover:bg-chalk;
+    }
+    .fh-nav-link-active {
+        @apply text-gold bg-gold-soft border-gold/25;
+    }
+    .fh-nav-pill {
+        @apply shrink-0 px-3 py-1.5 rounded font-mono text-xs tracking-wide text-steel-2 transition hover:text-ink;
+    }
+    .fh-nav-pill-active {
+        @apply text-gold bg-gold-soft;
+    }
+
+    /* Headline KPI stat card — Redline variant: layered-shadow dark card,
+       glowing ember accent rule along the top edge to mark it as a
+       top-level number. */
+    .fh-ticket {
+        @apply relative bg-chalk border border-chalk-3 rounded-lg shadow-fh-card px-5 pt-5 pb-5 overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-[2px] before:bg-gold before:content-[''];
+    }
+
+    /* Attendance check-in kiosk — viewfinder frame + restyled html5-qrcode
+       default widget (which otherwise ships its own grey library chrome). */
+    .fh-scan-frame {
+        @apply pointer-events-none absolute inset-0 z-10;
+    }
+    .fh-scan-corner {
+        @apply absolute w-7 h-7 border-gold/80;
+    }
+    .fh-scan-corner-tl {
+        @apply top-2 left-2 border-t-2 border-l-2 rounded-tl;
+    }
+    .fh-scan-corner-tr {
+        @apply top-2 right-2 border-t-2 border-r-2 rounded-tr;
+    }
+    .fh-scan-corner-bl {
+        @apply bottom-2 left-2 border-b-2 border-l-2 rounded-bl;
+    }
+    .fh-scan-corner-br {
+        @apply bottom-2 right-2 border-b-2 border-r-2 rounded-br;
+    }
+    .fh-scan-line {
+        @apply absolute left-2 right-2 h-px bg-gradient-to-r from-transparent via-gold to-transparent motion-reduce:hidden;
+        animation: fh-scan-sweep 2.6s ease-in-out infinite;
+    }
+    #qr-reader {
+        @apply !border-0 !p-0 relative overflow-hidden rounded bg-ink-2;
+    }
+    #qr-reader img {
+        @apply hidden;
+    }
+    #qr-reader__header_message {
+        @apply !font-sans !text-xs !border-0 !bg-transparent !text-steel-2 !m-0 !p-2 text-center;
+    }
+    #qr-reader__dashboard_section {
+        @apply !p-3 mt-1 !text-center;
+    }
+    #qr-reader .html5-qrcode-element {
+        @apply !font-mono !uppercase !tracking-wide !text-[11px] !font-semibold !rounded !border !border-gold/40 !bg-transparent !text-gold !px-3 !py-1.5 !m-1 hover:!bg-gold/10 !transition;
+    }
+    #qr-reader select.html5-qrcode-element {
+        @apply !bg-ink-2 !text-ink !border-steel/40;
+    }
+
+    /* RankSol platform panel — shares the fh-* Redline surface language
+       (same dark base, same ember accent); pf-* stays a separate class set
+       only so the two apps' markup can still diverge structurally where needed. */
     .pf-eyebrow {
-        @apply font-display uppercase tracking-wide text-xs text-mist;
+        @apply font-mono uppercase tracking-[0.12em] text-xs text-mist;
     }
     .pf-card {
-        @apply bg-graphite-2 border border-ink/[0.08] rounded-lg p-6 shadow-sm shadow-ink/5;
+        @apply bg-chalk border border-chalk-3 rounded-lg shadow-fh-card p-6 transition hover:shadow-fh-lift hover:-translate-y-0.5;
     }
     .pf-heading {
-        @apply font-display font-semibold uppercase tracking-wide text-ink;
+        @apply font-display font-semibold tracking-tight text-ink;
     }
     .pf-label {
         @apply pf-eyebrow block mb-1;
     }
     .pf-input {
-        @apply w-full border border-ink/15 rounded px-3 py-2 text-sm bg-white text-ink placeholder:text-mist-2 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition;
+        @apply w-full border border-chalk-3 rounded px-3 py-2 text-sm bg-chalk-2 text-ink placeholder:text-steel-2 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition;
     }
     select.pf-input {
         @apply appearance-none bg-no-repeat pr-9;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2357636D' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7.5 10 12.5 15 7.5'/%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%238D96A0' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7.5 10 12.5 15 7.5'/%3E%3C/svg%3E");
         background-position: right 0.65rem center;
         background-size: 1rem;
     }
@@ -98,40 +219,113 @@
         @apply text-tape text-sm mt-1;
     }
     .pf-btn-primary {
-        @apply inline-flex items-center justify-center gap-2 bg-gradient-to-br from-teal to-teal-2 text-white font-display font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded shadow-md shadow-teal/20 hover:brightness-110 active:brightness-95 transition disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-2 bg-teal text-void font-mono font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded shadow-fh-glow hover:brightness-110 active:brightness-95 transition disabled:opacity-50;
     }
     .pf-btn-secondary {
-        @apply inline-flex items-center justify-center gap-2 border border-ink/15 text-ink font-display font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded hover:bg-ink/5 hover:border-ink/25 transition;
+        @apply inline-flex items-center justify-center gap-2 border border-chalk-3 text-ink font-mono font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded hover:bg-chalk-2 hover:border-steel-2 transition;
     }
     .pf-btn-danger {
-        @apply inline-flex items-center justify-center gap-2 border border-tape/40 text-tape font-display font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded hover:bg-tape/10 transition;
+        @apply inline-flex items-center justify-center gap-2 border border-tape/40 text-tape font-mono font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded hover:bg-tape-soft transition;
     }
     .pf-th {
-        @apply text-left pf-eyebrow p-3 border-b border-ink/10 bg-ink/[0.02];
+        @apply text-left pf-eyebrow p-3 border-b border-chalk-3;
     }
     .pf-td {
-        @apply p-3 border-b border-ink/[0.06] text-sm text-ink/90;
+        @apply p-3 border-b border-chalk-3 text-sm text-ink/90;
     }
     .pf-td-mono {
-        @apply pf-td font-mono whitespace-nowrap;
+        @apply pf-td font-mono whitespace-nowrap tabular-nums;
+    }
+    .pf-tr {
+        @apply transition even:bg-chalk-2/40 hover:bg-chalk-2;
     }
     .pf-pill {
         @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full;
     }
     .pf-pill-good {
-        @apply pf-pill bg-teal/10 text-teal before:bg-teal;
+        @apply pf-pill bg-turf-soft text-turf before:bg-turf;
     }
     .pf-pill-warn {
-        @apply pf-pill bg-gold/15 text-gold-2 before:bg-gold-2;
+        @apply pf-pill bg-warn-soft text-warn before:bg-warn;
     }
     .pf-pill-bad {
-        @apply pf-pill bg-tape/10 text-tape before:bg-tape;
+        @apply pf-pill bg-tape-soft text-tape before:bg-tape;
     }
     .pf-pill-neutral {
-        @apply pf-pill bg-mist/10 text-mist before:bg-mist;
+        @apply pf-pill bg-steel-soft text-steel before:bg-steel;
     }
     .pf-stat-value {
-        @apply font-mono text-3xl font-semibold tracking-tight text-ink;
+        @apply font-mono text-3xl font-semibold tracking-tight tabular-nums text-ink;
+    }
+
+    /* Marketing site (public homepage) — own class set (own copy/layout
+       needs), but now painted with the same dark "Redline" tokens as the
+       fh- and pf- app classes above so the public site reads as the same
+       product. */
+    .mk-eyebrow {
+        @apply font-mono uppercase tracking-[0.14em] text-xs font-semibold text-gold;
+    }
+    .mk-heading {
+        @apply font-display font-semibold tracking-tight text-mk-ink text-balance;
+    }
+    .mk-card {
+        @apply bg-mk-paper border border-mk-line rounded-lg shadow-mk-card p-6 transition hover:shadow-mk-lift hover:-translate-y-0.5;
+    }
+    .mk-input {
+        @apply w-full border border-mk-line rounded px-3 py-2.5 text-sm bg-mk-paper text-mk-ink placeholder:text-mk-ink-2/60 focus:outline-none focus:ring-2 focus:ring-gold/25 focus:border-gold transition;
+    }
+    .mk-btn-primary {
+        @apply inline-flex items-center justify-center gap-2 bg-gold text-white font-mono font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded transition hover:bg-gold-2 active:brightness-95 disabled:opacity-50 disabled:pointer-events-none;
+    }
+    .mk-btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 bg-transparent border border-mk-ink/20 text-mk-ink font-mono font-semibold uppercase tracking-wide text-sm px-4 py-2 rounded transition hover:border-mk-ink/40 hover:bg-mk-paper-2 disabled:opacity-50 disabled:pointer-events-none;
+    }
+    .mk-nav-link {
+        @apply text-mk-ink-2 hover:text-mk-ink transition;
+    }
+
+    /* Hairline-bordered stat row under the hero — the one "operator data"
+       motif borrowed from the dashboard, so the light site still reads as
+       the same product. */
+    .mk-stat-strip {
+        @apply flex flex-wrap gap-x-8 gap-y-2 border-y border-mk-line py-4 font-mono text-xs text-mk-ink-2;
+    }
+    .mk-stat-strip strong {
+        @apply text-mk-ink font-semibold tabular-nums mr-1.5;
+    }
+
+    /* Scroll-triggered entrance, staggered per element via --reveal-delay.
+       Gated behind .js-reveal-ready (added by the observer script only once
+       JS + IntersectionObserver are confirmed available) so content stays
+       visible with no JS / no motion support — this never hides content. */
+    .js-reveal-ready .mk-reveal {
+        opacity: 0;
+        transform: translateY(14px);
+        transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+        transition-delay: var(--reveal-delay, 0ms);
+    }
+    .js-reveal-ready .mk-reveal.is-visible {
+        opacity: 1;
+        transform: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .js-reveal-ready .mk-reveal {
+            transition: none;
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    /* "How it works" step — the number lifts and warms on hover so the
+       sequence feels touchable, not just decorative. */
+    .mk-step {
+        @apply transition duration-300;
+    }
+    .mk-step:hover .mk-step-num {
+        @apply -translate-y-0.5 text-gold-2;
+    }
+    .mk-step-num {
+        @apply transition duration-300;
     }
 }
 
@@ -143,4 +337,11 @@
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
+}
+
+@keyframes fh-scan-sweep {
+    0%, 100% { top: 6%; opacity: 0; }
+    15% { opacity: 1; }
+    50% { top: 55%; opacity: 1; }
+    85% { opacity: 0; }
 }

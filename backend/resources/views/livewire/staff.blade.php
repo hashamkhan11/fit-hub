@@ -66,14 +66,14 @@
             </thead>
             <tbody>
                 @forelse ($staff as $account)
-                    <tr>
+                    <tr class="fh-tr">
                         <td class="fh-td font-medium">{{ $account->name }}</td>
                         <td class="fh-td text-steel">{{ $account->email }}</td>
                         <td class="fh-td flex gap-3">
-                            <button wire:click="startEdit({{ $account->id }})" class="fh-link-action text-gold-2">Edit</button>
+                            <button wire:click="startEdit({{ $account->id }})" class="fh-link-action text-gold-3">Edit</button>
                             <button
-                                wire:click="deleteStaff({{ $account->id }})"
-                                wire:confirm="Delete {{ $account->name }}'s staff account?"
+                                type="button"
+                                x-on:click="$store.confirmModal.show({ message: 'Delete ' + @js($account->name) + '\'s staff account?', danger: true, confirmLabel: 'Delete', onConfirm: () => $wire.deleteStaff({{ $account->id }}) })"
                                 class="fh-link-action text-tape"
                             >Delete</button>
                         </td>

@@ -6,7 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/logout_action.dart';
+import '../widgets/page_header.dart';
+import '../widgets/zine.dart';
 import 'home_screen.dart' show membershipProvider;
 
 final memberProfileProvider = FutureProvider.autoDispose((ref) async {
@@ -22,31 +23,40 @@ class ProfileScreen extends ConsumerWidget {
     final profileAsync = ref.watch(memberProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MY PROFILE'), actions: const [LogoutAction()]),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(memberProfileProvider);
-          ref.invalidate(membershipProvider);
-        },
-        color: AppColors.gold,
-        backgroundColor: AppColors.ink2,
-        child: profileAsync.when(
-          data: (member) => ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _AvatarHeader(member: member),
-              const SizedBox(height: 24),
-              _MembershipSummary(),
-              const SizedBox(height: 24),
-              _EditDetailsCard(member: member),
-              const SizedBox(height: 24),
-              const _ChangePasswordCard(),
-            ],
-          ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(
-            child: Text('Could not load profile: $err', style: const TextStyle(color: AppColors.tape)),
-          ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: PageHeader(title: 'Profile'),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(memberProfileProvider);
+                  ref.invalidate(membershipProvider);
+                },
+                color: AppColors.gold,
+                backgroundColor: AppColors.paper2,
+                child: profileAsync.when(
+                  data: (member) => ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                    children: [
+                      _AvatarHeader(member: member),
+                      const SizedBox(height: 24),
+                      _MembershipSummary(),
+                      const SizedBox(height: 24),
+                      _EditDetailsCard(member: member),
+                    ],
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(
+                    child: Text('Could not load profile: $err', style: AppTheme.body(color: AppColors.tape)),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -96,30 +106,12 @@ class _AvatarHeaderState extends ConsumerState<_AvatarHeader> {
         children: [
           GestureDetector(
             onTap: _uploading ? null : _pickPhoto,
-            child: Stack(
-              children: [
-                Container(
-                  width: 92,
-                  height: 92,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.gold, width: 2),
-                    color: AppColors.ink2,
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: photoUrl != null
-                      ? Image.network(
-                          photoUrl,
-                          headers: {'Authorization': 'Bearer ${client.authToken}'},
-                          fit: BoxFit.cover,
-                        )
-                      : Center(
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: AppTheme.display(fontSize: 34, color: AppColors.gold),
-                          ),
-                        ),
-                ),
+            child: Avatar(
+              photoUrl: photoUrl,
+              name: name,
+              authToken: client.authToken,
+              size: 92,
+              overlay: [
                 if (_uploading)
                   Positioned.fill(
                     child: DecoratedBox(
@@ -139,7 +131,7 @@ class _AvatarHeaderState extends ConsumerState<_AvatarHeader> {
                   child: Container(
                     padding: const EdgeInsets.all(5),
                     decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.gold),
-                    child: const Icon(Icons.camera_alt, size: 14, color: AppColors.ink),
+                    child: const Icon(Icons.camera_alt, size: 14, color: AppColors.voidBg),
                   ),
                 ),
               ],
@@ -150,7 +142,7 @@ class _AvatarHeaderState extends ConsumerState<_AvatarHeader> {
           const SizedBox(height: 4),
           Text(
             '${widget.member['display_code'] ?? ''}  ·  ${widget.member['email'] ?? ''}',
-            style: AppTheme.mono(fontSize: 12, color: AppColors.steel2),
+            style: AppTheme.mono(fontSize: 12, color: AppColors.steel),
           ),
         ],
       ),
@@ -171,17 +163,12 @@ class _MembershipSummary extends ConsumerWidget {
 
         final plan = membership['plan'] as Map<String, dynamic>;
 
-        return Container(
+        return MemCard(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.inkLine),
-            color: AppColors.ink2,
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('MEMBERSHIP', style: AppTheme.display(fontSize: 11, color: AppColors.steel2, letterSpacing: 1.5)),
+              Text('MEMBERSHIP', style: AppTheme.display(fontSize: 11, color: AppColors.steel, letterSpacing: 1.5)),
               const SizedBox(height: 8),
               _row('Plan', plan['name'] as String),
               _row('Ends', membership['end_date'].toString().split('T').first),
@@ -201,8 +188,8 @@ class _MembershipSummary extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTheme.mono(fontSize: 12, color: AppColors.steel2)),
-          Text(value, style: AppTheme.mono(fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(label, style: AppTheme.mono(fontSize: 12, color: AppColors.steel)),
+          Text(value, style: AppTheme.mono(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink)),
         ],
       ),
     );
@@ -232,7 +219,10 @@ class _EditDetailsCardState extends ConsumerState<_EditDetailsCard> {
 
     try {
       final client = ref.read(apiClientProvider);
-      await client.updateProfile(name: _nameController.text.trim(), phone: _phoneController.text.trim());
+      await client.updateProfile(
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+      );
       ref.invalidate(memberProfileProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated.')));
@@ -264,25 +254,23 @@ class _EditDetailsCardState extends ConsumerState<_EditDetailsCard> {
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
-              style: const TextStyle(color: AppColors.chalk),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(labelText: 'Phone'),
-              style: const TextStyle(color: AppColors.chalk),
             ),
             const SizedBox(height: 10),
             TextField(
               enabled: false,
               controller: TextEditingController(text: widget.member['email'] as String? ?? ''),
               decoration: const InputDecoration(labelText: 'Email (contact your gym to change)'),
-              style: const TextStyle(color: AppColors.steel2),
+              style: AppTheme.body(color: AppColors.steel),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(color: AppColors.tape)),
+              Text(_error!, style: AppTheme.body(color: AppColors.tape)),
             ],
             const SizedBox(height: 16),
             FilledButton(
@@ -291,113 +279,9 @@ class _EditDetailsCardState extends ConsumerState<_EditDetailsCard> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.ink),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.voidBg),
                     )
                   : const Text('SAVE CHANGES'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ChangePasswordCard extends ConsumerStatefulWidget {
-  const _ChangePasswordCard();
-
-  @override
-  ConsumerState<_ChangePasswordCard> createState() => _ChangePasswordCardState();
-}
-
-class _ChangePasswordCardState extends ConsumerState<_ChangePasswordCard> {
-  final _currentController = TextEditingController();
-  final _newController = TextEditingController();
-  final _confirmController = TextEditingController();
-  bool _saving = false;
-  String? _error;
-
-  Future<void> _save() async {
-    if (_newController.text != _confirmController.text) {
-      setState(() => _error = 'New passwords do not match.');
-      return;
-    }
-
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-
-    try {
-      final client = ref.read(apiClientProvider);
-      await client.changePassword(
-        currentPassword: _currentController.text,
-        newPassword: _newController.text,
-      );
-      _currentController.clear();
-      _newController.clear();
-      _confirmController.clear();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated.')));
-      }
-    } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _currentController.dispose();
-    _newController.dispose();
-    _confirmController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('CHANGE PASSWORD', style: AppTheme.display(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 1)),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _currentController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Current password'),
-              style: const TextStyle(color: AppColors.chalk),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _newController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'New password'),
-              style: const TextStyle(color: AppColors.chalk),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _confirmController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Confirm new password'),
-              style: const TextStyle(color: AppColors.chalk),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(color: AppColors.tape)),
-            ],
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.chalk),
-                    )
-                  : const Text('UPDATE PASSWORD'),
             ),
           ],
         ),

@@ -8,7 +8,7 @@ One FitHub installation can serve many gyms. Each gym has its own members, plans
 
 * [Who uses FitHub](#who-uses-fithub)
 * [Features](#features)
-* [Branches](#branches)
+* [Repository scope](#repository-scope)
 * [System architecture](#system-architecture)
 * [How the door unlock works](#how-the-door-unlock-works)
 * [Booking lifecycle](#booking-lifecycle)
@@ -24,6 +24,12 @@ One FitHub installation can serve many gyms. Each gym has its own members, plans
 * [Security](#security)
 * [Contributing](#contributing)
 * [License](#license)
+
+## Screenshots
+
+![FitHub feature graphic](mobile/store-assets/play-store-feature-graphic.png)
+
+![Gym staff dashboard](backend/public/images/marketing/dashboard.webp)
 
 ## Who uses FitHub
 
@@ -58,30 +64,25 @@ One FitHub installation can serve many gyms. Each gym has its own members, plans
 * Log body measurements (weight, body fat, chest, waist, hips, arms and notes)
 * Progress chart for weight over time
 * Edit profile, change password and update profile photo
-* Push notifications for reminders (iot branch)
+* Push notifications for reminders
 
 ### Platform admin
 
 * Platform admin login separate from gym staff login
 * Create gyms and view gym details
 * Overview of all gyms and recent platform activity
-* Subscription plans and Stripe billing for gyms (iot branch)
+* Subscription plans and Stripe billing for gyms
 
 ### Door access
 
 * Member app unlock through the backend command queue
 * ESP32 controller that polls the backend every second and opens a relay
-* Fingerprint sensor for check in at the door (iot branch)
-* Standalone office door controller with its own web admin, no backend needed (iot branch)
+* Fingerprint sensor for check in at the door
+* Standalone office door controller with its own web admin, no backend needed
 
-## Branches
+## Repository scope
 
-This repository has two branches. Read the one that matches what you need.
-
-* **main** holds the Laravel backend (API, dashboards, platform admin and door command API) and the Flutter member app.
-* **iot** holds everything in main, plus the ESP32 firmware, GitHub Actions CI, the deployment guide, Stripe billing, fingerprint check in and member push notifications.
-
-Links to firmware, CI and deployment files in this README point to the iot branch.
+This repository holds the whole project: the Laravel backend, the Flutter member app, the ESP32 door controller firmware, the GitHub Actions CI workflows and the deployment guide.
 
 ## System architecture
 
@@ -102,8 +103,8 @@ flowchart LR
 
     Backend --> DB[(MySQL database)]
     Backend --> SMS[Twilio SMS]
-    API --> Push[Firebase Cloud Messaging<br/>iot branch]
-    Web --> Billing[Stripe billing<br/>iot branch]
+    API --> Push[Firebase Cloud Messaging]
+    Web --> Billing[Stripe billing]
 ```
 
 The door controller does not need an open port on the internet. It asks the backend for work, so the connection always starts from the device.
@@ -157,15 +158,15 @@ The main tables and how they connect:
 erDiagram
     GYM ||--o{ STAFF : employs
     GYM ||--o{ PLAN : offers
-    GYM ||--o{ MEMBER : has
-    GYM ||--o{ CLASS : schedules
+    GYM ||--o{ MEMBER : registers
+    GYM ||--o{ GYMCLASS : schedules
     GYM ||--o{ LOCKDEVICE : owns
-    PLAN ||--o{ MEMBERSHIP : sold_as
+    PLAN ||--o{ MEMBERSHIP : "sold as"
     MEMBER ||--o{ MEMBERSHIP : holds
     MEMBER ||--o{ PAYMENT : makes
-    MEMBER ||--o{ ATTENDANCE : checks_in
+    MEMBER ||--o{ ATTENDANCE : "checks in"
     MEMBER ||--o{ BOOKING : books
-    CLASS ||--o{ BOOKING : has
+    GYMCLASS ||--o{ BOOKING : "is booked in"
     MEMBER ||--o{ MEASUREMENT : records
     LOCKDEVICE ||--o{ LOCKCOMMAND : receives
 ```
@@ -187,14 +188,14 @@ Mobile
 * fl_chart for charts and flutter_svg for QR codes
 * Firebase Cloud Messaging for push notifications
 
-Door controllers (iot branch)
+Door controllers
 * ESP32 with the Arduino framework and PlatformIO
 * ArduinoJson and Adafruit Fingerprint libraries
 
 Services
 * Twilio for SMS
-* Stripe for gym billing (iot branch)
-* Firebase Cloud Messaging for push (iot branch)
+* Stripe for gym billing
+* Firebase Cloud Messaging for push
 * Spatie Backup for nightly backups
 
 ## Project structure
@@ -203,9 +204,9 @@ Services
 FitHub/
 ├── backend/          Laravel app: API, dashboards, platform admin, console jobs
 ├── mobile/           Flutter member app
-├── esp32-lock/       Door controller firmware with fingerprint check in (iot branch)
-├── office-lock/      Standalone office door firmware (iot branch)
-└── .github/          CI workflows for backend and mobile (iot branch)
+├── esp32-lock/       Door controller firmware with fingerprint check in
+├── office-lock/      Standalone office door firmware
+└── .github/          CI workflows for backend and mobile
 ```
 
 ## Getting started
@@ -217,7 +218,7 @@ FitHub/
 * Node.js 20 or newer and npm
 * MySQL 8.x or MariaDB (Laragon works well on Windows)
 * Flutter stable and the Android SDK for the mobile app
-* PlatformIO for the door controller firmware (iot branch)
+* PlatformIO for the door controller firmware
 
 ### Backend setup
 
@@ -282,7 +283,7 @@ Use your computer's LAN address for `API_HOST`. On Windows you can find it with 
 flutter build apk --release --dart-define=API_BASE_URL=https://your-domain.com/api
 ```
 
-### Door controller setup (iot branch)
+### Door controller setup
 
 Each firmware project is a PlatformIO project.
 
@@ -292,7 +293,7 @@ pio run -t upload
 pio device monitor
 ```
 
-The `esp32-lock` firmware needs the backend address and a device token. The device token is created in the dashboard on the Lock devices page. The `office-lock` firmware needs no backend. It is set up through its own web page. See [office-lock](https://github.com/hashamkhan11/FitHub/tree/iot/office-lock).
+The `esp32-lock` firmware needs the backend address and a device token. The device token is created in the dashboard on the Lock devices page. The `office-lock` firmware needs no backend. It is set up through its own web page. See [office-lock](https://github.com/hashamkhan11/FitHub/tree/main/office-lock).
 
 ## Configuration
 
@@ -312,7 +313,7 @@ Email
 SMS
 * `TWILIO_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
 
-Billing and push (iot branch)
+Billing and push
 * `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`
 * Firebase service account file at `backend/storage/app/firebase/service-account.json`. This file is ignored by Git.
 
@@ -335,7 +336,7 @@ Member
 * `GET /member/membership` and `GET /member/attendance`
 * `GET` and `POST /member/measurements`
 * `PUT /member/profile`, `POST /member/photo` and `POST /member/change-password`
-* `POST /member/fcm-token` (iot branch)
+* `POST /member/fcm-token`
 
 Classes
 * `GET /classes`
@@ -348,7 +349,7 @@ Door
 * `GET /lock/commands/{command}/status`
 * `GET /lock/poll`, `POST /lock/commands/{command}/ack` and `POST /lock/commands/{command}/progress` (called by the door controller with its device token in the `X-Device-Token` header)
 
-Fingerprint and notifications (iot branch)
+Fingerprint and notifications
 * `POST /fingerprint/scan`
 * `GET /member/notifications` and notification read and delete routes
 
@@ -369,7 +370,7 @@ flutter analyze
 flutter test
 ```
 
-On the iot branch, GitHub Actions runs these checks on every push and pull request.
+GitHub Actions runs these checks on every push and pull request.
 
 ```mermaid
 flowchart TD
@@ -386,11 +387,11 @@ flowchart TD
     M4 --> M5[Build debug APK]
 ```
 
-Workflow files are in [.github/workflows](https://github.com/hashamkhan11/FitHub/tree/iot/.github/workflows).
+Workflow files are in [.github/workflows](https://github.com/hashamkhan11/FitHub/tree/main/.github/workflows).
 
 ## Deployment
 
-The production checklist is in [backend/DEPLOY.md](https://github.com/hashamkhan11/FitHub/blob/iot/backend/DEPLOY.md) on the iot branch. It covers:
+The production checklist is in [backend/DEPLOY.md](https://github.com/hashamkhan11/FitHub/blob/main/backend/DEPLOY.md). It covers:
 
 * Running `composer install --no-dev`, migrations and cache commands on each deploy
 * Adding the cron job for the Laravel scheduler (reminders and backups)
@@ -430,7 +431,7 @@ Do not commit `.env`, service account files or `google-services.json`.
 * Login, password reset and door polling routes are rate limited.
 * Gym accounts only work while their gym is active.
 * Secrets (`.env`, Firebase service account, `google-services.json`, Stripe and Twilio keys) are never committed to the repository.
-* Stripe webhook requests are checked with the signing secret (iot branch).
+* Stripe webhook requests are checked with the signing secret.
 
 To report a security problem, contact the repository owner privately. Do not open a public issue.
 
@@ -440,7 +441,7 @@ FitHub is a private project. Ask the repository owner before you make changes. W
 
 ## License
 
-No license has been chosen yet. All rights are reserved by the author until a license is added.
+This is proprietary software. All rights are reserved. See [LICENSE](LICENSE) for the terms.
 
 ---
 

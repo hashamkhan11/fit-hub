@@ -3,9 +3,9 @@
 namespace App\Livewire;
 
 use App\Models\ActivityLog;
-use App\Models\Booking;
 use App\Models\GymClass;
 use App\Models\Member;
+use App\Services\PushNotificationService;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
@@ -42,7 +42,7 @@ class Bookings extends Component
             'selectedClass' => $selectedClass,
             'bookings' => $selectedClass
                 ? $selectedClass->bookings()
-                    ->with('member')
+                    ->with(['member' => fn ($q) => $q->withTrashed()])
                     ->where('status', '!=', 'cancelled')
                     ->orderByRaw("status = 'waitlisted'")
                     ->oldest()
@@ -70,12 +70,22 @@ class Bookings extends Component
             $booking = $class->book($member);
         } catch (\DomainException $e) {
             $this->addError('memberId', $e->getMessage());
+
             return;
         }
 
         ActivityLog::record(
             'booking.added',
             "Booked {$member->name} into {$class->name} ({$booking->status})."
+        );
+
+        app(PushNotificationService::class)->send(
+            $member,
+            $booking->status === 'booked' ? 'Booking confirmed' : 'Added to waitlist',
+            $booking->status === 'booked'
+                ? "You're booked for {$class->name} at ".$class->start_time->format('g:i A, M j').'.'
+                : "{$class->name} is full — you're on the waitlist and will be booked automatically if a spot opens up.",
+            ['type' => 'class']
         );
 
         $this->reset('memberId');
@@ -86,11 +96,20 @@ class Bookings extends Component
         Gate::authorize('manage-bookings');
 
         $class = GymClass::where('gym_id', auth()->user()->gym_id)->findOrFail($this->classId);
-        $booking = $class->bookings()->with('member')->findOrFail($bookingId);
+        $booking = $class->bookings()->with(['member' => fn ($q) => $q->withTrashed()])->findOrFail($bookingId);
         $memberName = $booking->member->name;
 
-        $class->cancelBooking($booking);
+        $promoted = $class->cancelBooking($booking);
 
         ActivityLog::record('booking.cancelled', "Cancelled {$memberName}'s booking for {$class->name}.");
+
+        if ($promoted) {
+            app(PushNotificationService::class)->send(
+                $promoted->member,
+                'Booking confirmed',
+                "A spot opened up — you're now booked for {$class->name} at ".$class->start_time->format('g:i A, M j').'.',
+                ['type' => 'class']
+            );
+        }
     }
 }

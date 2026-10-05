@@ -4,14 +4,14 @@
         <p class="text-steel text-sm mb-4">These details appear on every printed and downloaded payment receipt.</p>
 
         @if ($saved)
-            <div class="mb-4 px-3 py-2 rounded border border-turf/30 bg-turf/10 text-turf text-sm font-medium">
+            <div class="fh-banner-success">
                 Business profile saved.
             </div>
         @endif
 
         <form wire:submit="save" class="space-y-6">
             <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-sm border border-chalk-2 bg-chalk flex items-center justify-center overflow-hidden shrink-0">
+                <div class="w-14 h-14 rounded border border-chalk-3 bg-chalk flex items-center justify-center overflow-hidden shrink-0">
                     @if ($logo)
                         <img src="{{ $logo->temporaryUrl() }}" alt="New logo" class="w-full h-full object-contain p-1">
                     @elseif ($gym->logo_url)
@@ -26,7 +26,7 @@
                     @error('logo') <p class="fh-error">{{ $message }}</p> @enderror
                     <p class="text-steel text-xs mt-1">PNG or JPG, up to 6&nbsp;MB. Printed at the top of every receipt.</p>
                     @if ($gym->logo_url && ! $logo)
-                        <button type="button" wire:click="removeLogo" wire:confirm="Remove the current logo?" class="fh-link-action text-tape mt-1">Remove logo</button>
+                        <button type="button" x-on:click="$store.confirmModal.show({ message: 'Remove the current logo?', danger: true, confirmLabel: 'Remove', onConfirm: () => $wire.removeLogo() })" class="fh-link-action text-tape mt-1">Remove logo</button>
                     @endif
                 </div>
             </div>

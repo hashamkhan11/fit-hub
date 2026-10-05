@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Cashier\Billable;
 
 class Gym extends Model
 {
-    use HasFactory;
+    use Billable, HasFactory;
 
     protected $fillable = [
         'name',
@@ -25,8 +27,10 @@ class Gym extends Model
         'plan_price',
         'billing_cycle',
         'trial_ends_at',
+        'trial_reminder_sent_at',
         'suspended_at',
         'suspended_reason',
+        'subscription_plan_id',
     ];
 
     protected $appends = ['logo_url', 'currency_symbol'];
@@ -36,6 +40,7 @@ class Gym extends Model
         return [
             'plan_price' => 'decimal:2',
             'trial_ends_at' => 'datetime',
+            'trial_reminder_sent_at' => 'datetime',
             'suspended_at' => 'datetime',
         ];
     }
@@ -57,6 +62,11 @@ class Gym extends Model
         return $this->hasMany(User::class);
     }
 
+    public function owner(): ?User
+    {
+        return $this->staff()->where('role', 'owner')->first();
+    }
+
     public function members(): HasMany
     {
         return $this->hasMany(Member::class);
@@ -75,6 +85,21 @@ class Gym extends Model
     public function platformActivityLogs(): HasMany
     {
         return $this->hasMany(PlatformActivityLog::class);
+    }
+
+    public function subscriptionPlan(): BelongsTo
+    {
+        return $this->belongsTo(SubscriptionPlan::class);
+    }
+
+    public function stripeName(): string
+    {
+        return $this->name;
+    }
+
+    public function stripeEmail(): ?string
+    {
+        return $this->email;
     }
 
     public function isSuspended(): bool
@@ -104,5 +129,24 @@ class Gym extends Model
     public function isTrialExpired(): bool
     {
         return $this->isOnTrial() && $this->trial_ends_at && $this->trial_ends_at->isPast();
+    }
+
+    public function hasHardwareAccess(): bool
+    {
+        return (bool) $this->subscriptionPlan?->has_hardware_access;
+    }
+
+    public function canAddMember(): bool
+    {
+        $limit = $this->subscriptionPlan?->member_limit;
+
+        return $limit === null || $this->members()->count() < $limit;
+    }
+
+    public function canAddStaff(): bool
+    {
+        $limit = $this->subscriptionPlan?->staff_limit;
+
+        return $limit === null || $this->staff()->count() < $limit;
     }
 }

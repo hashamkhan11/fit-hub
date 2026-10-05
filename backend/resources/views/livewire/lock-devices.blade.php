@@ -5,7 +5,7 @@
             <p class="text-sm text-steel mb-4">
                 This is shown only once. Paste it into the device's WiFi setup screen. If you lose it, come back here and rotate the token to get a new one.
             </p>
-            <div class="fh-input font-mono text-sm select-all break-all bg-black/20">{{ $revealedToken }}</div>
+            <div class="fh-input font-mono text-sm select-all break-all bg-void/40">{{ $revealedToken }}</div>
             <button wire:click="dismissToken" class="fh-btn-secondary mt-4">Done, I've saved it</button>
         </div>
     @endif
@@ -39,7 +39,7 @@
             </thead>
             <tbody>
                 @forelse ($devices as $device)
-                    <tr>
+                    <tr class="fh-tr">
                         <td class="fh-td font-medium">{{ $device->name }}</td>
                         <td class="fh-td">
                             @if ($device->is_online)
@@ -55,10 +55,10 @@
                             {{ $device->last_seen_at?->diffForHumans() ?? 'Never' }}
                         </td>
                         <td class="fh-td flex gap-3">
-                            <button wire:click="triggerUnlock({{ $device->id }})" wire:confirm="Unlock {{ $device->name }}?" class="fh-link-action text-gold-2">Unlock</button>
+                            <button type="button" x-on:click="$store.confirmModal.show({ message: 'Unlock ' + @js($device->name) + '?', confirmLabel: 'Unlock', onConfirm: () => $wire.triggerUnlock({{ $device->id }}) })" class="fh-link-action text-gold-3">Unlock</button>
                             @if ($canManage)
-                                <button wire:click="regenerateToken({{ $device->id }})" wire:confirm="Rotate token for {{ $device->name }}? The old token will stop working immediately." class="fh-link-action">Rotate Token</button>
-                                <button wire:click="deleteDevice({{ $device->id }})" wire:confirm="Remove {{ $device->name }}?" class="fh-link-action text-tape">Delete</button>
+                                <button type="button" x-on:click="$store.confirmModal.show({ message: 'Rotate token for ' + @js($device->name) + '? The old token will stop working immediately.', danger: true, confirmLabel: 'Rotate', onConfirm: () => $wire.regenerateToken({{ $device->id }}) })" class="fh-link-action">Rotate Token</button>
+                                <button type="button" x-on:click="$store.confirmModal.show({ message: 'Remove ' + @js($device->name) + '?', danger: true, confirmLabel: 'Remove', onConfirm: () => $wire.deleteDevice({{ $device->id }}) })" class="fh-link-action text-tape">Delete</button>
                             @endif
                         </td>
                     </tr>

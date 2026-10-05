@@ -45,17 +45,18 @@
 
         <div class="border-t border-ink/10 pt-6">
             <h2 class="pf-heading text-sm mb-3">Subscription</h2>
-            <p class="text-xs text-mist mb-3">No payment gateway yet — billing is tracked manually until Stripe is added.</p>
+            <p class="text-xs text-mist mb-3">The gym owner completes payment themselves via the Billing page in their dashboard once created.</p>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="pf-label">Plan Name</label>
-                    <input type="text" wire:model="plan_name" class="pf-input">
-                    @error('plan_name') <p class="pf-error">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label class="pf-label">Plan Price</label>
-                    <input type="text" wire:model="plan_price" class="pf-input" placeholder="e.g. 79.00">
-                    @error('plan_price') <p class="pf-error">{{ $message }}</p> @enderror
+                    <label class="pf-label">Catalog Plan</label>
+                    <select wire:model="subscription_plan_id" class="pf-input">
+                        @forelse ($plans as $plan)
+                            <option value="{{ $plan->id }}">{{ $plan->name }} — ${{ $plan->monthly_price }}/mo</option>
+                        @empty
+                            <option value="">No plans in the catalog yet</option>
+                        @endforelse
+                    </select>
+                    @error('subscription_plan_id') <p class="pf-error">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="pf-label">Billing Cycle</label>

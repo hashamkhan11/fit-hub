@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/logo_badge.dart';
 import 'forgot_password_screen.dart';
+import 'main_shell.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -30,6 +31,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainShell()),
+        );
+      }
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -52,7 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           gradient: RadialGradient(
             center: Alignment(0, -0.6),
             radius: 1.1,
-            colors: [AppColors.ink2, AppColors.ink],
+            colors: [AppColors.ink2, AppColors.paper2],
           ),
         ),
         child: Center(
@@ -63,27 +69,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const LogoBadge(size: 56, fontSize: 20),
+                  const LogoBadge(size: 72, fontSize: 22),
                   const SizedBox(height: 18),
-                  Text('FITHUB', style: AppTheme.display(fontSize: 24, fontWeight: FontWeight.w700)),
+                  Text('FITHUB', style: AppTheme.display(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.ink)),
                   const SizedBox(height: 4),
                   Text(
                     'MEMBER SIGN-IN',
-                    style: AppTheme.display(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.steel2, letterSpacing: 2),
+                    style: AppTheme.display(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.steel, letterSpacing: 2),
                   ),
                   const SizedBox(height: 36),
                   TextField(
                     controller: _emailController,
                     decoration: const InputDecoration(labelText: 'Email'),
                     keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: AppColors.chalk),
                   ),
                   const SizedBox(height: 14),
                   TextField(
                     controller: _passwordController,
                     decoration: const InputDecoration(labelText: 'Password'),
                     obscureText: true,
-                    style: const TextStyle(color: AppColors.chalk),
                   ),
                   Align(
                     alignment: Alignment.centerRight,
@@ -93,12 +97,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
                         );
                       },
-                      child: const Text('FORGOT PASSWORD?'),
+                      child: Text(
+                        'FORGOT PASSWORD?',
+                        style: AppTheme.mono(color: AppColors.gold, fontWeight: FontWeight.w600, fontSize: 12, letterSpacing: 0.4),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   if (_error != null) ...[
-                    Text(_error!, style: const TextStyle(color: AppColors.tape)),
+                    Text(_error!, style: AppTheme.body(color: AppColors.tape)),
                     const SizedBox(height: 16),
                   ],
                   SizedBox(
@@ -109,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.ink),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.voidBg),
                             )
                           : const Text('LOG IN'),
                     ),

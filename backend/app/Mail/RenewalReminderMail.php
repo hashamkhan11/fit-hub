@@ -13,9 +13,7 @@ class RenewalReminderMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Membership $membership)
-    {
-    }
+    public function __construct(public Membership $membership) {}
 
     public function envelope(): Envelope
     {

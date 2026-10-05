@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToGym;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Str;
@@ -12,7 +14,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class Member extends Authenticatable
 {
-    use HasApiTokens, HasFactory, SoftDeletes;
+    use BelongsToGym, HasApiTokens, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'gym_id',
@@ -20,10 +22,13 @@ class Member extends Authenticatable
         'name',
         'email',
         'phone',
+        'height_cm',
         'password',
         'photo_path',
         'join_date',
         'fcm_token',
+        'fingerprint_id',
+        'fingerprint_device_id',
         'reset_otp',
         'reset_otp_expires_at',
     ];
@@ -35,11 +40,21 @@ class Member extends Authenticatable
         'reset_otp_expires_at',
     ];
 
-    protected $appends = ['display_code', 'photo_url'];
+    protected $appends = ['display_code', 'photo_url', 'initials'];
 
     public function getPhotoUrlAttribute(): ?string
     {
         return $this->photo_path ? asset('storage/'.$this->photo_path) : null;
+    }
+
+    /**
+     * Initials shown as avatar text (e.g. "JS") when no photo is uploaded.
+     */
+    public function getInitialsAttribute(): string
+    {
+        $words = collect(explode(' ', trim($this->name)))->filter();
+
+        return $words->take(2)->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))->join('');
     }
 
     protected function casts(): array
@@ -63,7 +78,7 @@ class Member extends Authenticatable
     }
 
     /**
-     * Human-facing member ID, e.g. "M-0007" — distinguishes same-named members.
+     * Member ID shown to people, e.g. "M-0007", to tell same-named members apart.
      */
     public function getDisplayCodeAttribute(): string
     {
@@ -85,9 +100,26 @@ class Member extends Authenticatable
         return $this->hasMany(Membership::class);
     }
 
+    /**
+     * The newest membership, any status — use when you need more than just active/not.
+     */
+    public function latestMembership(): HasOne
+    {
+        return $this->hasOne(Membership::class)->latestOfMany('id');
+    }
+
+    /**
+     * The membership currently granting access, if any (not always the one with
+     * the latest end_date).
+     */
+    public function activeMembership(): ?Membership
+    {
+        return $this->memberships->first(fn (Membership $membership) => $membership->isActive());
+    }
+
     public function hasActiveMembership(): bool
     {
-        return $this->memberships->contains(fn (Membership $membership) => $membership->isActive());
+        return $this->activeMembership() !== null;
     }
 
     public function attendances(): HasMany
@@ -98,5 +130,15 @@ class Member extends Authenticatable
     public function measurements(): HasMany
     {
         return $this->hasMany(Measurement::class);
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function fingerprintDevice(): BelongsTo
+    {
+        return $this->belongsTo(LockDevice::class, 'fingerprint_device_id');
     }
 }

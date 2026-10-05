@@ -30,7 +30,6 @@ class Attendance extends Component
                 ->get(),
             'currentlyIn' => AttendanceModel::where('gym_id', auth()->user()->gym_id)
                 ->whereNull('checked_out_at')
-                ->whereDate('checked_in_at', now()->toDateString())
                 ->count(),
         ]);
     }
@@ -50,35 +49,9 @@ class Attendance extends Component
             return;
         }
 
-        $openAttendance = $member->attendances()
-            ->whereNull('checked_out_at')
-            ->whereDate('checked_in_at', now()->toDateString())
-            ->latest('checked_in_at')
-            ->first();
+        $result = AttendanceModel::recordScan($member);
 
-        if ($openAttendance) {
-            $openAttendance->update(['checked_out_at' => now()]);
-            $this->lastSuccess = true;
-            $this->lastMessage = "Checked out: {$member->name}";
-
-            return;
-        }
-
-        $latestMembership = $member->memberships()->latest('end_date')->first();
-
-        if (! $latestMembership?->isActive()) {
-            $this->lastSuccess = false;
-            $this->lastMessage = "{$member->name} has no active membership.";
-
-            return;
-        }
-
-        $member->attendances()->create([
-            'gym_id' => $member->gym_id,
-            'checked_in_at' => now(),
-        ]);
-
-        $this->lastSuccess = true;
-        $this->lastMessage = "Checked in: {$member->name}";
+        $this->lastSuccess = $result['success'];
+        $this->lastMessage = $result['message'];
     }
 }

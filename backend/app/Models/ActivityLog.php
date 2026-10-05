@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToGym;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityLog extends Model
 {
+    use BelongsToGym;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -32,7 +35,7 @@ class ActivityLog extends Model
     }
 
     /**
-     * Record an action against the currently authenticated staff/owner user.
+     * Logs an action done by the currently logged-in staff/owner user.
      */
     public static function record(string $action, string $description): void
     {

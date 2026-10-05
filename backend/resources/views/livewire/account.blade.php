@@ -4,7 +4,7 @@
         <p class="text-steel text-sm mb-4">Signed in as <span class="font-mono uppercase">{{ auth()->user()->role }}</span> at {{ auth()->user()->gym->name }}.</p>
 
         @if ($profileSaved)
-            <div class="mb-4 px-3 py-2 rounded border border-turf/30 bg-turf/10 text-turf text-sm font-medium">
+            <div class="fh-banner-success">
                 Account details saved.
             </div>
         @endif
@@ -32,7 +32,7 @@
         <h2 class="fh-heading mb-4">Change Password</h2>
 
         @if ($passwordSaved)
-            <div class="mb-4 px-3 py-2 rounded border border-turf/30 bg-turf/10 text-turf text-sm font-medium">
+            <div class="fh-banner-success">
                 Password updated.
             </div>
         @endif

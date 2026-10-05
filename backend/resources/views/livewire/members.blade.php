@@ -1,8 +1,7 @@
 <div class="max-w-[1400px] mx-auto space-y-6">
-    <div class="fh-card">
-        <h2 class="fh-heading mb-4">Enroll New Member</h2>
-
-        <form wire:submit="enroll" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    @if ($showForm)
+        <x-fh-modal title="Enroll New Member" close="resetEnrollForm" wide>
+        <form wire:submit="enroll" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
                 <label class="fh-label">Name</label>
                 <input type="text" wire:model="name" class="fh-input">
@@ -55,7 +54,7 @@
                 @error('trainer_id') <p class="fh-error">{{ $message }}</p> @enderror
             </div>
 
-            <div class="col-span-full border-t border-chalk-2 pt-4 mt-1">
+            <div class="col-span-full border-t border-chalk-3 pt-4 mt-1">
                 <p class="fh-eyebrow">Initial payment <span class="normal-case tracking-normal text-steel">— optional, can also be recorded later from the member's row</span></p>
             </div>
 
@@ -82,18 +81,20 @@
                 @error('initial_payment_note') <p class="fh-error">{{ $message }}</p> @enderror
             </div>
 
-            <div class="col-span-full flex items-end">
+            <div class="col-span-full flex items-end gap-2">
                 <button type="submit" class="fh-btn-primary">
                     Enroll Member
                 </button>
+                <button type="button" wire:click="resetEnrollForm" class="fh-btn-secondary">
+                    Cancel
+                </button>
             </div>
         </form>
-    </div>
+        </x-fh-modal>
+    @endif
 
     @if ($editingMemberId)
-        <div class="fh-card max-w-2xl">
-            <h2 class="fh-heading mb-4">Edit Member</h2>
-
+        <x-fh-modal title="Edit Member" close="cancelEdit">
             <form wire:submit="updateMember" class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="fh-label">Name</label>
@@ -124,18 +125,22 @@
                     @error('edit_trainer_id') <p class="fh-error">{{ $message }}</p> @enderror
                 </div>
 
+                <div>
+                    <label class="fh-label">Fingerprint ID</label>
+                    <input type="number" min="0" wire:model="edit_fingerprint_id" class="fh-input" placeholder="Not enrolled">
+                    @error('edit_fingerprint_id') <p class="fh-error">{{ $message }}</p> @enderror
+                </div>
+
                 <div class="col-span-2 flex gap-2">
                     <button type="submit" class="fh-btn-primary">Save Changes</button>
                     <button type="button" wire:click="cancelEdit" class="fh-btn-secondary">Cancel</button>
                 </div>
             </form>
-        </div>
+        </x-fh-modal>
     @endif
 
     @if ($freezingMembershipId)
-        <div class="fh-card max-w-2xl">
-            <h2 class="fh-heading mb-4">Freeze Membership — {{ $freezingMemberName }}</h2>
-
+        <x-fh-modal :title="'Freeze Membership — '.$freezingMemberName" close="cancelFreeze">
             <form wire:submit="freezeMembership" class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="fh-label">Expected resume date (optional)</label>
@@ -148,13 +153,11 @@
                     <button type="button" wire:click="cancelFreeze" class="fh-btn-secondary">Cancel</button>
                 </div>
             </form>
-        </div>
+        </x-fh-modal>
     @endif
 
     @if ($renewingMemberId)
-        <div class="fh-card max-w-2xl">
-            <h2 class="fh-heading mb-4">Renew Membership — {{ $renewingMemberName }}</h2>
-
+        <x-fh-modal :title="'Renew Membership — '.$renewingMemberName" close="cancelRenewal">
             <form wire:submit="renewMembership" class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="fh-label">Plan</label>
@@ -178,7 +181,7 @@
                     <button type="button" wire:click="cancelRenewal" class="fh-btn-secondary">Cancel</button>
                 </div>
             </form>
-        </div>
+        </x-fh-modal>
     @endif
 
     @if ($lastPaymentId)
@@ -191,16 +194,14 @@
                 <div class="flex gap-2 shrink-0">
                     <a href="{{ route('payments.receipt', $lastPaymentId) }}" target="_blank" class="fh-btn-secondary">Print Receipt</a>
                     <a href="{{ route('payments.receipt.pdf', $lastPaymentId) }}" class="fh-btn-secondary">Download PDF</a>
-                    <button type="button" wire:click="dismissReceiptPrompt" class="fh-link-action text-steel-2">Dismiss</button>
+                    <button type="button" wire:click="dismissReceiptPrompt" class="fh-link-action text-steel">Dismiss</button>
                 </div>
             </div>
         </div>
     @endif
 
     @if ($recordingPaymentFor)
-        <div class="fh-card max-w-2xl">
-            <h2 class="fh-heading mb-4">Record Payment — {{ $paymentMemberName }}</h2>
-
+        <x-fh-modal :title="'Record Payment — '.$paymentMemberName" close="cancelPayment">
             <form wire:submit="recordPayment" class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="fh-label">Amount (balance due: {{ number_format($paymentBalanceDue, 2) }})</label>
@@ -236,10 +237,13 @@
                     <button type="button" wire:click="cancelPayment" class="fh-btn-secondary">Cancel</button>
                 </div>
             </form>
-        </div>
+        </x-fh-modal>
     @endif
 
     <div class="fh-card-flush">
+        @error('deleteMember')
+            <p class="fh-error px-4 pt-4">{{ $message }}</p>
+        @enderror
         <div class="p-4 pb-0">
             <input
                 type="text"
@@ -249,10 +253,57 @@
             >
         </div>
 
+        <div class="px-4 pt-3 flex flex-wrap items-center gap-2">
+            <select wire:model.live="filterStatus" class="fh-input w-auto">
+                <option value="">Status — any</option>
+                <option value="active">Currently active</option>
+                <option value="expired">Expired</option>
+            </select>
+
+            <select wire:model.live="filterPaymentStatus" class="fh-input w-auto">
+                <option value="">Payment — any</option>
+                <option value="paid">Paid</option>
+                <option value="partial">Partial</option>
+                <option value="pending">Pending</option>
+            </select>
+
+            <select wire:model.live="filterPlanId" class="fh-input w-auto">
+                <option value="">Plan — any</option>
+                @foreach ($plans as $plan)
+                    <option value="{{ $plan->id }}">{{ $plan->name }}</option>
+                @endforeach
+            </select>
+
+            <select wire:model.live="filterTrainerId" class="fh-input w-auto">
+                <option value="">Trainer — any</option>
+                @foreach ($trainers as $trainer)
+                    <option value="{{ $trainer->id }}">{{ $trainer->name }}</option>
+                @endforeach
+            </select>
+
+            @if ($search !== '' || $filterStatus !== '' || $filterPaymentStatus !== '' || $filterPlanId !== '' || $filterTrainerId !== '')
+                <button type="button" wire:click="resetFilters" class="fh-link-action text-steel">Clear filters</button>
+            @endif
+
+            <div class="ml-auto flex items-center gap-3">
+                @if (count($selected) > 0)
+                    <span class="text-xs font-mono text-steel">{{ count($selected) }} selected</span>
+                    <button type="button" wire:click="clearSelection" class="fh-link-action text-steel">Clear selection</button>
+                @endif
+                <button type="button" wire:click="exportCsv" class="fh-btn-secondary">
+                    Export CSV{{ count($selected) > 0 ? ' ('.count($selected).')' : '' }}
+                </button>
+                <button type="button" wire:click="createNew" class="fh-btn-primary">New Member</button>
+            </div>
+        </div>
+
         <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
                 <tr>
+                    <th class="fh-th w-10">
+                        <input type="checkbox" wire:click="toggleSelectAll" @checked($allSelected) class="accent-gold-2" aria-label="Select all members">
+                    </th>
                     <th class="fh-th font-mono normal-case tracking-normal">ID</th>
                     <th class="fh-th">Name</th>
                     <th class="fh-th">Email</th>
@@ -266,9 +317,21 @@
             <tbody>
                 @forelse ($members as $member)
                     @php $membership = $member->memberships->first(); @endphp
-                    <tr>
+                    <tr class="fh-tr">
+                        <td class="fh-td">
+                            <input type="checkbox" wire:model.live="selected" value="{{ $member->id }}" class="accent-gold-2" aria-label="Select {{ $member->name }}">
+                        </td>
                         <td class="fh-td-mono text-steel">{{ $member->display_code }}</td>
-                        <td class="fh-td font-medium max-w-[160px] truncate" title="{{ $member->name }}">{{ $member->name }}</td>
+                        <td class="fh-td font-medium max-w-[180px]">
+                            <div class="flex items-center gap-2.5">
+                                @if ($member->photo_url)
+                                    <img src="{{ $member->photo_url }}" alt="" class="fh-avatar w-8 h-8 text-xs">
+                                @else
+                                    <span class="fh-avatar w-8 h-8 text-xs">{{ $member->initials }}</span>
+                                @endif
+                                <span class="truncate" title="{{ $member->name }}">{{ $member->name }}</span>
+                            </div>
+                        </td>
                         <td class="fh-td text-steel max-w-[200px] truncate" title="{{ $member->email }}">{{ $member->email }}</td>
                         <td class="fh-td max-w-[150px]">
                             <div class="truncate" title="{{ $membership?->plan?->name }}">{{ $membership?->plan?->name ?? '—' }}</div>
@@ -341,7 +404,7 @@
                                         x-cloak
                                         :style="menuStyle"
                                         style="display: none;"
-                                        class="fixed z-50 w-56 rounded-md border border-chalk-2 bg-white shadow-lg py-1.5"
+                                        class="fixed z-50 w-56 rounded border border-chalk-3 bg-chalk-2 shadow-xl shadow-void/40 py-1.5"
                                         x-transition:enter="transition ease-out duration-100"
                                         x-transition:enter-start="opacity-0 scale-95"
                                         x-transition:enter-end="opacity-100 scale-100"
@@ -350,9 +413,18 @@
                                         x-transition:leave-end="opacity-0 scale-95"
                                         @keydown.escape.window="open = false"
                                     >
-                                        <div class="px-3 py-2 border-b border-chalk-2 mb-1">
-                                            <p class="text-sm font-medium text-ink truncate">{{ $member->name }}</p>
-                                            <p class="text-xs font-mono text-steel">{{ $member->display_code }}</p>
+                                        <div class="px-3 py-2 border-b border-chalk-3 mb-1">
+                                            <div class="flex items-center gap-2.5">
+                                                @if ($member->photo_url)
+                                                    <img src="{{ $member->photo_url }}" alt="" class="fh-avatar w-9 h-9 text-sm">
+                                                @else
+                                                    <span class="fh-avatar w-9 h-9 text-sm">{{ $member->initials }}</span>
+                                                @endif
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-medium text-ink truncate">{{ $member->name }}</p>
+                                                    <p class="text-xs font-mono text-steel">{{ $member->display_code }}</p>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <button wire:click="startRenewal({{ $member->id }})" @click="open = false" class="fh-menu-item">Renew Membership</button>
@@ -367,12 +439,16 @@
                                         <button wire:click="viewQr({{ $member->id }})" @click="open = false" class="fh-menu-item">View QR Code</button>
                                         <button wire:click="startEdit({{ $member->id }})" @click="open = false" class="fh-menu-item">Edit Details</button>
 
-                                        <div class="border-t border-chalk-2 my-1"></div>
+                                        <div class="border-t border-chalk-3 my-1"></div>
 
                                         <button
-                                            wire:click="deleteMember({{ $member->id }})"
-                                            wire:confirm="Delete {{ $member->name }}? This also removes their memberships, attendance, and progress history."
-                                            @click="open = false"
+                                            type="button"
+                                            x-on:click="open = false; $store.confirmModal.show({
+                                                message: 'Delete ' + @js($member->name) + '? This also removes their memberships, attendance, and progress history.',
+                                                danger: true,
+                                                confirmLabel: 'Delete',
+                                                onConfirm: () => $wire.deleteMember({{ $member->id }})
+                                            })"
                                             class="fh-menu-item text-tape hover:bg-tape/5"
                                         >Delete Member</button>
                                     </div>
@@ -382,7 +458,17 @@
                     </tr>
                 @empty
                     <tr>
-                        <td class="fh-td text-steel" colspan="8">No members yet.</td>
+                        <td class="fh-td text-steel text-center py-12" colspan="9">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 mx-auto mb-2 text-steel-2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"/>
+                            </svg>
+                            @if ($search !== '' || $filterStatus !== '' || $filterPaymentStatus !== '' || $filterPlanId !== '' || $filterTrainerId !== '')
+                                <p>No members match your search or filters.</p>
+                                <button type="button" wire:click="resetFilters" class="fh-link-action text-gold-3 mt-1">Clear filters</button>
+                            @else
+                                <p>No members enrolled yet — click "New Member" to add your first one.</p>
+                            @endif
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
@@ -392,7 +478,7 @@
 
     @if ($viewingQrMemberId)
         <div
-            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-void/70"
             wire:click.self="closeQrModal"
             @keydown.escape.window="$wire.closeQrModal()"
         >
@@ -408,6 +494,12 @@
                     </svg>
                 </button>
 
+                @if ($viewingQrMemberPhotoUrl)
+                    <img src="{{ $viewingQrMemberPhotoUrl }}" alt="" class="fh-avatar w-16 h-16 text-xl mx-auto mb-3">
+                @else
+                    <span class="fh-avatar w-16 h-16 text-xl mx-auto mb-3">{{ $viewingQrMemberInitials }}</span>
+                @endif
+
                 <h2 class="fh-heading mb-1">{{ $viewingQrMemberName }}</h2>
                 <p class="fh-eyebrow mb-4">{{ $viewingQrMemberCode }}</p>
 
@@ -416,7 +508,7 @@
                     alt="QR code for {{ $viewingQrMemberName }}"
                     width="200"
                     height="200"
-                    class="mx-auto border border-chalk-2 rounded"
+                    class="mx-auto border border-chalk-3 rounded"
                 >
 
                 <a

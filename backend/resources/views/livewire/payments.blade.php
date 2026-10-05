@@ -37,7 +37,7 @@
                 </thead>
                 <tbody>
                     @forelse ($payments as $payment)
-                        <tr>
+                        <tr class="fh-tr">
                             <td class="fh-td-mono">{{ $payment->paid_at->format('M j, Y') }}</td>
                             <td class="fh-td">
                                 {{ $payment->membership->member->name }}
@@ -48,8 +48,8 @@
                             <td class="fh-td-mono text-steel">{{ $gym->currency_symbol }}{{ number_format($payment->membership->price_paid ?? 0, 2) }}</td>
                             <td class="fh-td-mono">{{ $gym->currency_symbol }}{{ number_format($payment->amount, 2) }}</td>
                             <td class="fh-td text-right whitespace-nowrap">
-                                <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="fh-link-action text-gold-2">Receipt</a>
-                                <a href="{{ route('payments.receipt.pdf', $payment) }}" class="fh-link-action text-steel-2 ml-3">PDF</a>
+                                <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="fh-link-action text-gold-3">Receipt</a>
+                                <a href="{{ route('payments.receipt.pdf', $payment) }}" class="fh-link-action text-steel ml-3">PDF</a>
                             </td>
                         </tr>
                     @empty

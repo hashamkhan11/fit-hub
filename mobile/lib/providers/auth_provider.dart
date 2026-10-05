@@ -1,14 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../services/api_client.dart';
 import '../services/push_notifications.dart';
+
+const _secureStorage = FlutterSecureStorage();
 
 class AuthState {
   final String? token;
   final Map<String, dynamic>? member;
 
-  const AuthState({this.token, this.member});
+  /// True until the saved-session check on cold start has finished. The
+  /// splash screen watches this so it never briefly shows the login screen
+  /// to an already-logged-in member.
+  final bool restoring;
+
+  const AuthState({this.token, this.member, this.restoring = true});
 
   bool get isLoggedIn => token != null;
 }
@@ -21,11 +30,12 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> _restoreSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final token = await _secureStorage.read(key: 'token');
     if (token != null) {
-      state = AuthState(token: token);
-      await registerPushToken(ApiClient(token: token));
+      state = AuthState(token: token, restoring: false);
+      unawaited(registerPushToken(ApiClient(token: token)));
+    } else {
+      state = const AuthState(restoring: false);
     }
   }
 
@@ -33,21 +43,38 @@ class AuthNotifier extends Notifier<AuthState> {
     final client = ApiClient();
     final data = await client.login(email, password);
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', data['token'] as String);
+    await _secureStorage.write(key: 'token', value: data['token'] as String);
 
     state = AuthState(
       token: data['token'] as String,
       member: data['member'] as Map<String, dynamic>,
+      restoring: false,
     );
 
-    await registerPushToken(ApiClient(token: data['token'] as String));
+    unawaited(registerPushToken(ApiClient(token: data['token'] as String)));
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    state = const AuthState();
+    final token = state.token;
+    if (token != null) {
+      // Try to log out on server too, but still clear local login if this fails.
+      try {
+        await ApiClient(token: token).logout();
+      } catch (_) {}
+    }
+
+    await _clearLocalSession();
+  }
+
+  /// Clears local login without calling server, used when token is invalid.
+  Future<void> forceLogout() async {
+    if (state.token == null) return;
+    await _clearLocalSession();
+  }
+
+  Future<void> _clearLocalSession() async {
+    await _secureStorage.delete(key: 'token');
+    state = const AuthState(restoring: false);
   }
 }
 
@@ -55,5 +82,8 @@ final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new)
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final token = ref.watch(authProvider).token;
-  return ApiClient(token: token);
+  return ApiClient(
+    token: token,
+    onSessionExpired: () => ref.read(authProvider.notifier).forceLogout(),
+  );
 });

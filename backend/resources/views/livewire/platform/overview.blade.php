@@ -7,25 +7,25 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="pf-card">
             <p class="pf-eyebrow mb-2">Total Gyms</p>
-            <p class="pf-stat-value">{{ $totalGyms }}</p>
+            <p class="pf-stat-value" x-data="countUp({{ $totalGyms }})" x-text="display">{{ $totalGyms }}</p>
         </div>
         <div class="pf-card">
             <p class="pf-eyebrow mb-2">Active</p>
-            <p class="pf-stat-value text-teal">{{ $activeGyms }}</p>
+            <p class="pf-stat-value text-teal" x-data="countUp({{ $activeGyms }})" x-text="display">{{ $activeGyms }}</p>
         </div>
         <div class="pf-card">
             <p class="pf-eyebrow mb-2">On Trial</p>
-            <p class="pf-stat-value text-gold">{{ $trialGyms }}</p>
+            <p class="pf-stat-value text-[#B9862E]" x-data="countUp({{ $trialGyms }})" x-text="display">{{ $trialGyms }}</p>
         </div>
         <div class="pf-card">
             <p class="pf-eyebrow mb-2">Suspended</p>
-            <p class="pf-stat-value text-tape">{{ $suspendedGyms }}</p>
+            <p class="pf-stat-value text-tape" x-data="countUp({{ $suspendedGyms }})" x-text="display">{{ $suspendedGyms }}</p>
         </div>
     </div>
 
     <div class="pf-card max-w-xs">
         <p class="pf-eyebrow mb-2">Estimated MRR</p>
-        <p class="pf-stat-value">${{ number_format($mrr, 2) }}</p>
+        <p class="pf-stat-value" x-data="countUp({{ $mrr }}, { decimals: 2, prefix: '$' })" x-text="display">${{ number_format($mrr, 2) }}</p>
         <p class="text-xs text-mist mt-1">Manually tracked — no payment gateway yet</p>
     </div>
 

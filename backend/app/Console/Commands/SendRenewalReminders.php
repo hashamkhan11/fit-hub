@@ -4,12 +4,10 @@ namespace App\Console\Commands;
 
 use App\Mail\RenewalReminderMail;
 use App\Models\Membership;
+use App\Services\PushNotificationService;
 use App\Services\SmsService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
-use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
-use Kreait\Laravel\Firebase\Facades\Firebase;
 
 class SendRenewalReminders extends Command
 {
@@ -17,15 +15,13 @@ class SendRenewalReminders extends Command
 
     protected $description = 'Notify members whose membership expires within the next 3 days';
 
-    public function handle(SmsService $sms): void
+    public function handle(SmsService $sms, PushNotificationService $push): void
     {
         $memberships = Membership::query()
             ->whereNull('renewal_reminder_sent_at')
             ->whereBetween('end_date', [now()->toDateString(), now()->addDays(3)->toDateString()])
             ->with('member', 'plan')
             ->get();
-
-        $messaging = Firebase::messaging();
 
         foreach ($memberships as $membership) {
             $member = $membership->member;
@@ -47,17 +43,7 @@ class SendRenewalReminders extends Command
                 }
             }
 
-            if ($member->fcm_token) {
-                try {
-                    $messaging->send(
-                        CloudMessage::new()
-                            ->withToken($member->fcm_token)
-                            ->withNotification(Notification::create('Your membership is expiring soon', $expiryText))
-                    );
-                } catch (\Throwable $e) {
-                    $this->error("Failed to push renewal reminder for membership #{$membership->id}: {$e->getMessage()}");
-                }
-            }
+            $push->send($member, 'Your membership is expiring soon', $expiryText, ['type' => 'renewal']);
 
             $membership->update(['renewal_reminder_sent_at' => now()]);
             $this->info("Renewal reminder sent for membership #{$membership->id}");

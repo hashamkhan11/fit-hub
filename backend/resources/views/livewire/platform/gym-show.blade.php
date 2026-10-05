@@ -17,17 +17,41 @@
     </div>
 
     @if (session('status'))
-        <div class="pf-card border-teal/30 bg-teal/5 text-sm text-teal">{{ session('status') }}</div>
+        <div class="pf-card border-teal/30 bg-teal/5 text-sm text-teal-2">{{ session('status') }}</div>
     @endif
+
+    <div class="pf-card max-w-2xl">
+        <h2 class="pf-heading text-sm mb-4">Gym Profile</h2>
+        <form wire:submit="updateGymProfile" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label class="pf-label">Name</label>
+                <input type="text" wire:model="gym_name" class="pf-input">
+                @error('gym_name') <p class="pf-error">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="pf-label">Email</label>
+                <input type="email" wire:model="gym_email" class="pf-input">
+                @error('gym_email') <p class="pf-error">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="pf-label">Phone</label>
+                <input type="text" wire:model="gym_phone" class="pf-input">
+                @error('gym_phone') <p class="pf-error">{{ $message }}</p> @enderror
+            </div>
+            <div class="sm:col-span-3">
+                <button type="submit" class="pf-btn-primary">Save Profile</button>
+            </div>
+        </form>
+    </div>
 
     <div class="grid grid-cols-3 gap-4">
         <div class="pf-card">
             <p class="pf-eyebrow mb-2">Members</p>
-            <p class="pf-stat-value">{{ $memberCount }}</p>
+            <p class="pf-stat-value" x-data="countUp({{ $memberCount }})" x-text="display">{{ $memberCount }}</p>
         </div>
         <div class="pf-card">
             <p class="pf-eyebrow mb-2">Staff</p>
-            <p class="pf-stat-value">{{ $staffCount }}</p>
+            <p class="pf-stat-value" x-data="countUp({{ $staffCount }})" x-text="display">{{ $staffCount }}</p>
         </div>
         <div class="pf-card">
             <p class="pf-eyebrow mb-2">Owner</p>
@@ -41,44 +65,55 @@
             <h2 class="pf-heading text-sm mb-4">Plan</h2>
             <form wire:submit="updatePlan" class="space-y-4">
                 <div>
-                    <label class="pf-label">Plan Name</label>
-                    <input type="text" wire:model="plan_name" class="pf-input">
-                    @error('plan_name') <p class="pf-error">{{ $message }}</p> @enderror
+                    <label class="pf-label">Catalog Plan</label>
+                    <select wire:model="subscription_plan_id" class="pf-input">
+                        @forelse ($plans as $plan)
+                            <option value="{{ $plan->id }}">{{ $plan->name }} — ${{ $plan->monthly_price }}/mo</option>
+                        @empty
+                            <option value="">No plans in the catalog yet</option>
+                        @endforelse
+                    </select>
+                    @error('subscription_plan_id') <p class="pf-error">{{ $message }}</p> @enderror
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="pf-label">Price</label>
-                        <input type="text" wire:model="plan_price" class="pf-input">
-                        @error('plan_price') <p class="pf-error">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="pf-label">Billing Cycle</label>
-                        <select wire:model="billing_cycle" class="pf-input">
-                            <option value="monthly">Monthly</option>
-                            <option value="yearly">Yearly</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="pf-label">Billing Cycle</label>
+                    <select wire:model="billing_cycle" class="pf-input">
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
                 </div>
                 <button type="submit" class="pf-btn-primary">Save Plan</button>
             </form>
+
+            <div class="border-t border-ink/10 mt-6 pt-6">
+                <h2 class="pf-heading text-sm mb-3">Stripe Subscription</h2>
+                @if ($subscription)
+                    <p class="text-sm text-ink">Status: <span class="font-mono">{{ $subscription->stripe_status }}</span></p>
+                    @if ($gym->pm_type)
+                        <p class="text-sm text-mist mt-1">Card: {{ ucfirst($gym->pm_type) }} &middot;&middot;&middot;&middot; {{ $gym->pm_last_four }}</p>
+                    @endif
+                @else
+                    <p class="text-sm text-mist">No Stripe subscription yet — the gym owner subscribes from their own dashboard's Billing page.</p>
+                @endif
+            </div>
 
             <div class="border-t border-ink/10 mt-6 pt-6 space-y-3">
                 <h2 class="pf-heading text-sm">Account Actions</h2>
                 @error('resend') <p class="pf-error">{{ $message }}</p> @enderror
 
-                <button wire:click="resendWelcome" wire:confirm="Reset the owner's password and resend the welcome email?" class="pf-btn-secondary w-full">
+                <button type="button" x-on:click="$store.confirmModal.show({ message: 'Reset the owner\'s password and resend the welcome email?', confirmLabel: 'Resend', onConfirm: () => $wire.resendWelcome() })" class="pf-btn-secondary w-full">
                     Resend Welcome Email
                 </button>
 
                 @if ($gym->isSuspended())
-                    <button wire:click="activate" wire:confirm="Reactivate this gym? Owner/staff/members will regain access." class="pf-btn-primary w-full">
+                    <button type="button" x-on:click="$store.confirmModal.show({ message: 'Reactivate this gym? Owner/staff/members will regain access.', confirmLabel: 'Reactivate', onConfirm: () => $wire.activate() })" class="pf-btn-primary w-full">
                         Reactivate Gym
                     </button>
                 @else
                     <div class="space-y-2">
                         <input type="text" wire:model="suspend_reason" placeholder="Reason for suspension…" class="pf-input">
                         @error('suspend_reason') <p class="pf-error">{{ $message }}</p> @enderror
-                        <button wire:click="suspend" wire:confirm="Suspend this gym? Owner/staff/members will be locked out immediately." class="pf-btn-danger w-full">
+                        <button type="button" x-on:click="$store.confirmModal.show({ message: 'Suspend this gym? Owner/staff/members will be locked out immediately.', danger: true, confirmLabel: 'Suspend', onConfirm: () => $wire.suspend() })" class="pf-btn-danger w-full">
                             Suspend Gym
                         </button>
                     </div>

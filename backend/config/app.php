@@ -123,4 +123,28 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Support Contact
+    |--------------------------------------------------------------------------
+    |
+    | Shown on the marketing site, legal pages, and suspended/error states so
+    | a gym owner always has somewhere to go when something breaks.
+    |
+    */
+
+    'support_email' => env('SUPPORT_EMAIL', 'support@example.com'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Support phone / WhatsApp number
+    |--------------------------------------------------------------------------
+    |
+    | Shown on the marketing site and used for the floating WhatsApp button.
+    | Store it in E.164 format (e.g. +923001234567) — that's what wa.me links need.
+    |
+    */
+
+    'support_phone' => env('SUPPORT_PHONE', '+10000000000'),
+
 ];

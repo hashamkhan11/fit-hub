@@ -1,6 +1,10 @@
 # Editor/tooling metadata not part of the FitHub deliverable
 .claude/
 .github/modernize/
+*.code-workspace
 
 # Firebase service-account keys — never commit
 *firebase-adminsdk*.json
+
+# Local backups/archives — not part of the deliverable, too large for git
+*.zip

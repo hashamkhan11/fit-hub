@@ -62,7 +62,8 @@ class Membership extends Model
 
         $started = $this->start_date !== null && ! $this->start_date->isFuture();
 
-        return $started && ($this->end_date?->isFuture() ?? false);
+        // Compare against the end of end_date's day, so coverage lasts the whole day.
+        return $started && ($this->end_date?->copy()->endOfDay()->isFuture() ?? false);
     }
 
     public function isPaused(): bool
@@ -83,8 +84,7 @@ class Membership extends Model
     }
 
     /**
-     * Resume a paused membership, pushing end_date out by however long it was frozen.
-     * Rounded up so a member is never shorted for a partial day frozen.
+     * Resumes a paused membership, extending end_date by however long it was paused.
      */
     public function resume(): void
     {
@@ -102,12 +102,11 @@ class Membership extends Model
     }
 
     /**
-     * True when the membership isn't fully paid and its term has already ended.
-     * A paused membership is never overdue — the gym itself froze the clock.
+     * True if not fully paid and the term has ended. Paused memberships are never overdue.
      */
     public function isOverdue(): bool
     {
-        return ! $this->isPaused() && $this->payment_status !== 'paid' && ($this->end_date?->isPast() ?? false);
+        return ! $this->isPaused() && $this->payment_status !== 'paid' && ($this->end_date?->copy()->endOfDay()->isPast() ?? false);
     }
 
     protected function amountPaid(): Attribute
@@ -121,7 +120,7 @@ class Membership extends Model
     }
 
     /**
-     * Recompute payment_status from the payments actually recorded so far.
+     * Updates payment_status based on payments recorded so far.
      */
     public function syncPaymentStatus(): void
     {

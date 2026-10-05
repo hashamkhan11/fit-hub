@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\ActivityLog;
+use App\Models\Booking;
 use App\Models\Member;
 use App\Models\Membership;
 use App\Models\Plan;
@@ -18,10 +19,12 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class Members extends Component
 {
+    public bool $showForm = false;
+
     #[Validate('required|string|max:255')]
     public string $name = '';
 
-    #[Validate('required|email|unique:members,email')]
+    #[Validate('required|email|unique:members,email,NULL,id,deleted_at,NULL')]
     public string $email = '';
 
     #[Validate('nullable|string|max:20')]
@@ -54,6 +57,10 @@ class Members extends Component
 
     public string $viewingQrMemberCode = '';
 
+    public ?string $viewingQrMemberPhotoUrl = null;
+
+    public string $viewingQrMemberInitials = '';
+
     public ?int $recordingPaymentFor = null;
 
     public ?int $lastPaymentId = null;
@@ -72,6 +79,16 @@ class Members extends Component
 
     public string $search = '';
 
+    public string $filterStatus = '';
+
+    public string $filterPaymentStatus = '';
+
+    public string $filterPlanId = '';
+
+    public string $filterTrainerId = '';
+
+    public array $selected = [];
+
     public ?int $editingMemberId = null;
 
     public string $edit_name = '';
@@ -81,6 +98,8 @@ class Members extends Component
     public string $edit_phone = '';
 
     public ?int $edit_trainer_id = null;
+
+    public string $edit_fingerprint_id = '';
 
     public ?int $renewingMemberId = null;
 
@@ -105,22 +124,132 @@ class Members extends Component
 
     public function render()
     {
+        $members = $this->filteredMembers();
+        $memberIds = $members->pluck('id')->map(fn ($id) => (string) $id)->all();
+
         return view('livewire.members', [
-            'members' => Member::where('gym_id', auth()->user()->gym_id)
-                ->when($this->search !== '', function ($query) {
-                    $term = $this->search;
-                    $query->where(function ($query) use ($term) {
-                        $query->where('name', 'like', "%{$term}%")
-                            ->orWhere('member_code', 'like', "%{$term}%");
-                    });
-                })
-                ->with(['memberships' => fn ($q) => $q->latest('end_date')->with('plan'), 'trainer'])
-                ->latest()
-                ->get(),
+            'members' => $members,
             'plans' => Plan::where('gym_id', auth()->user()->gym_id)->where('is_active', true)->get(),
             'trainers' => User::where('gym_id', auth()->user()->gym_id)->where('role', 'trainer')->get(),
             'gym' => auth()->user()->gym,
+            'allSelected' => count($memberIds) > 0 && count(array_intersect($memberIds, $this->selected)) === count($memberIds),
         ]);
+    }
+
+    private function filteredMembers()
+    {
+        return Member::where('gym_id', auth()->user()->gym_id)
+            ->when($this->search !== '', function ($query) {
+                $term = $this->search;
+                $query->where(function ($query) use ($term) {
+                    $query->where('name', 'like', "%{$term}%")
+                        ->orWhere('member_code', 'like', "%{$term}%");
+                });
+            })
+            ->when($this->filterTrainerId !== '', fn ($query) => $query->where('trainer_id', $this->filterTrainerId))
+            ->with(['memberships' => fn ($q) => $q->latest('end_date')->with('plan'), 'trainer'])
+            ->latest()
+            ->get()
+            ->filter(function ($member) {
+                $membership = $member->memberships->first();
+
+                if ($this->filterStatus !== '' && ($membership?->isActive() ?? false) !== ($this->filterStatus === 'active')) {
+                    return false;
+                }
+
+                if ($this->filterPaymentStatus !== '' && $membership?->payment_status !== $this->filterPaymentStatus) {
+                    return false;
+                }
+
+                if ($this->filterPlanId !== '' && (string) $membership?->plan_id !== $this->filterPlanId) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->values();
+    }
+
+    public function resetFilters(): void
+    {
+        $this->reset(['search', 'filterStatus', 'filterPaymentStatus', 'filterPlanId', 'filterTrainerId']);
+        $this->selected = [];
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->selected = [];
+    }
+
+    public function updatedFilterStatus(): void
+    {
+        $this->selected = [];
+    }
+
+    public function updatedFilterPaymentStatus(): void
+    {
+        $this->selected = [];
+    }
+
+    public function updatedFilterPlanId(): void
+    {
+        $this->selected = [];
+    }
+
+    public function updatedFilterTrainerId(): void
+    {
+        $this->selected = [];
+    }
+
+    public function toggleSelectAll(): void
+    {
+        $ids = $this->filteredMembers()->pluck('id')->map(fn ($id) => (string) $id)->all();
+
+        $this->selected = (count($ids) > 0 && count(array_intersect($ids, $this->selected)) === count($ids))
+            ? []
+            : $ids;
+    }
+
+    public function clearSelection(): void
+    {
+        $this->selected = [];
+    }
+
+    public function exportCsv()
+    {
+        Gate::authorize('view-members');
+
+        $members = $this->filteredMembers();
+
+        if (! empty($this->selected)) {
+            $selectedIds = array_map('intval', $this->selected);
+            $members = $members->whereIn('id', $selectedIds)->values();
+        }
+
+        return response()->streamDownload(function () use ($members) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, ['Member ID', 'Name', 'Email', 'Phone', 'Plan', 'Trainer', 'Membership Ends', 'Payment Status', 'Status', 'Join Date']);
+
+            foreach ($members as $member) {
+                $membership = $member->memberships->first();
+
+                fputcsv($handle, [
+                    $member->display_code,
+                    $member->name,
+                    $member->email,
+                    $member->phone,
+                    $membership?->plan?->name,
+                    $member->trainer?->name,
+                    $membership?->end_date?->format('Y-m-d'),
+                    $membership?->payment_status,
+                    $membership?->isPaused() ? 'Paused' : (($membership?->isActive() ?? false) ? 'Active' : 'Inactive'),
+                    $member->join_date?->format('Y-m-d'),
+                ]);
+            }
+
+            fclose($handle);
+        }, 'members-'.now()->format('Y-m-d-His').'.csv', ['Content-Type' => 'text/csv']);
     }
 
     public function updatedPlanId($value): void
@@ -136,11 +265,32 @@ class Members extends Component
         }
     }
 
+    public function createNew(): void
+    {
+        $this->resetEnrollForm();
+        $this->showForm = true;
+    }
+
+    public function resetEnrollForm(): void
+    {
+        $this->reset(['name', 'email', 'phone', 'password', 'plan_id', 'trainer_id', 'initial_payment_amount', 'initial_payment_note', 'showForm']);
+        $this->start_date = now()->toDateString();
+        $this->resetErrorBag();
+    }
+
     public function enroll(): void
     {
         Gate::authorize('manage-members');
 
         $this->validate();
+
+        $gym = auth()->user()->gym;
+
+        if (! $gym->canAddMember()) {
+            $this->addError('plan_id', 'This gym has reached its member limit for its current subscription plan.');
+
+            return;
+        }
 
         $plan = Plan::where('gym_id', auth()->user()->gym_id)->findOrFail($this->plan_id);
         $trainerId = $this->trainer_id ? $this->findTrainer($this->trainer_id)->id : null;
@@ -186,8 +336,7 @@ class Members extends Component
 
         ActivityLog::record('member.enrolled', "Enrolled {$this->name} on the {$plan->name} plan.");
 
-        $this->reset(['name', 'email', 'phone', 'password', 'plan_id', 'trainer_id', 'initial_payment_amount', 'initial_payment_note']);
-        $this->start_date = now()->toDateString();
+        $this->resetEnrollForm();
     }
 
     public function viewQr(int $memberId): void
@@ -197,11 +346,13 @@ class Members extends Component
         $this->viewingQrMemberId = $member->id;
         $this->viewingQrMemberName = $member->name;
         $this->viewingQrMemberCode = $member->display_code;
+        $this->viewingQrMemberPhotoUrl = $member->photo_url;
+        $this->viewingQrMemberInitials = $member->initials;
     }
 
     public function closeQrModal(): void
     {
-        $this->reset(['viewingQrMemberId', 'viewingQrMemberName', 'viewingQrMemberCode']);
+        $this->reset(['viewingQrMemberId', 'viewingQrMemberName', 'viewingQrMemberCode', 'viewingQrMemberPhotoUrl', 'viewingQrMemberInitials']);
     }
 
     public function startRenewal(int $memberId): void
@@ -232,16 +383,50 @@ class Members extends Component
 
         $member = $this->findMember($this->renewingMemberId);
         $plan = Plan::where('gym_id', auth()->user()->gym_id)->findOrFail($this->renew_plan_id);
+        $newStart = Carbon::parse($this->renew_start_date);
+        $conflicting = collect();
 
-        $member->memberships()->create([
-            'plan_id' => $plan->id,
-            'start_date' => $this->renew_start_date,
-            'end_date' => Carbon::parse($this->renew_start_date)->addDays($plan->duration_days),
-            'payment_status' => 'pending',
-            'price_paid' => $plan->price,
-        ]);
+        try {
+            DB::transaction(function () use ($member, $plan, $newStart, &$conflicting) {
+                // Lock this check so two renewal submissions at once can't both
+                // pass the conflict check. An unpaid overlapping membership is
+                // likely a duplicate and gets auto-removed; a paid one is a real
+                // record, so we refuse instead of deleting it.
+                $conflicting = $member->memberships()->where('end_date', '>=', $newStart)->lockForUpdate()->get();
 
-        ActivityLog::record('membership.renewed', "Renewed membership for {$member->name} on the {$plan->name} plan.");
+                foreach ($conflicting as $existing) {
+                    if ($existing->amount_paid > 0) {
+                        throw new \DomainException('This member already has a paid membership running '.$existing->start_date->format('M j, Y').' – '.$existing->end_date->format('M j, Y').'. Resolve or remove that renewal before starting one on this date.');
+                    }
+                }
+
+                foreach ($conflicting as $existing) {
+                    $existing->delete();
+                }
+
+                $member->memberships()->create([
+                    'plan_id' => $plan->id,
+                    'start_date' => $this->renew_start_date,
+                    'end_date' => $newStart->copy()->addDays($plan->duration_days),
+                    'payment_status' => 'pending',
+                    'price_paid' => $plan->price,
+                ]);
+            });
+        } catch (\DomainException $e) {
+            $this->addError('renew_start_date', $e->getMessage());
+
+            return;
+        }
+
+        $message = "Renewed membership for {$member->name} on the {$plan->name} plan.";
+
+        if ($conflicting->isNotEmpty()) {
+            // Log the auto-removal so staff can see it happened (row is soft-deleted, not gone).
+            $removed = $conflicting->map(fn ($c) => $c->start_date->format('M j').' – '.$c->end_date->format('M j, Y'))->implode(', ');
+            $message = "Renewed membership for {$member->name} on the {$plan->name} plan (auto-removed unpaid conflicting membership: {$removed}).";
+        }
+
+        ActivityLog::record('membership.renewed', $message);
 
         $this->cancelRenewal();
     }
@@ -387,6 +572,7 @@ class Members extends Component
         $this->edit_email = $member->email;
         $this->edit_phone = $member->phone ?? '';
         $this->edit_trainer_id = $member->trainer_id;
+        $this->edit_fingerprint_id = $member->fingerprint_id !== null ? (string) $member->fingerprint_id : '';
     }
 
     public function updateMember(): void
@@ -395,9 +581,17 @@ class Members extends Component
 
         $this->validate([
             'edit_name' => 'required|string|max:255',
-            'edit_email' => ['required', 'email', Rule::unique('members', 'email')->ignore($this->editingMemberId)],
+            'edit_email' => ['required', 'email', Rule::unique('members', 'email')->ignore($this->editingMemberId)->whereNull('deleted_at')],
             'edit_phone' => 'nullable|string|max:20',
             'edit_trainer_id' => 'nullable|exists:users,id',
+            'edit_fingerprint_id' => [
+                'nullable',
+                'integer',
+                'min:0',
+                Rule::unique('members', 'fingerprint_id')
+                    ->where(fn ($query) => $query->where('gym_id', auth()->user()->gym_id))
+                    ->ignore($this->editingMemberId),
+            ],
         ]);
 
         $trainerId = $this->edit_trainer_id ? $this->findTrainer($this->edit_trainer_id)->id : null;
@@ -407,6 +601,7 @@ class Members extends Component
             'email' => $this->edit_email,
             'phone' => $this->edit_phone ?: null,
             'trainer_id' => $trainerId,
+            'fingerprint_id' => $this->edit_fingerprint_id !== '' ? (int) $this->edit_fingerprint_id : null,
         ]);
 
         $this->cancelEdit();
@@ -414,8 +609,8 @@ class Members extends Component
 
     public function cancelEdit(): void
     {
-        $this->reset(['editingMemberId', 'edit_name', 'edit_email', 'edit_phone', 'edit_trainer_id']);
-        $this->resetErrorBag(['edit_name', 'edit_email', 'edit_phone', 'edit_trainer_id']);
+        $this->reset(['editingMemberId', 'edit_name', 'edit_email', 'edit_phone', 'edit_trainer_id', 'edit_fingerprint_id']);
+        $this->resetErrorBag(['edit_name', 'edit_email', 'edit_phone', 'edit_trainer_id', 'edit_fingerprint_id']);
     }
 
     public function deleteMember(int $memberId): void
@@ -423,6 +618,19 @@ class Members extends Component
         Gate::authorize('manage-members');
 
         $member = $this->findMember($memberId);
+
+        if ($member->memberships()->get()->sum('balance_due') > 0) {
+            $this->addError('deleteMember', "{$member->name} has an outstanding balance and can't be removed. Record their payment first, or write off the balance.");
+
+            return;
+        }
+
+        Booking::where('member_id', $member->id)
+            ->whereIn('status', ['booked', 'waitlisted'])
+            ->with('gymClass')
+            ->get()
+            ->each(fn (Booking $booking) => $booking->gymClass->cancelBooking($booking));
+
         $name = $member->name;
         $code = $member->display_code;
         $member->update(['email' => null]);

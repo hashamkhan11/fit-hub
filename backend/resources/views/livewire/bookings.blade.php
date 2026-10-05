@@ -30,6 +30,18 @@
         </div>
 
         <div class="fh-card-flush">
+            <div class="px-5 py-4 border-b border-chalk-3 flex items-center justify-between gap-4">
+                <div>
+                    <p class="fh-eyebrow">Bookings</p>
+                    <p class="font-medium text-ink">
+                        {{ $selectedClass->name }}
+                        <span class="text-steel font-normal">— {{ $selectedClass->start_time->format('D, M j g:ia') }}</span>
+                    </p>
+                </div>
+                <span class="fh-pill-neutral shrink-0">
+                    {{ $bookings->where('status', 'booked')->count() }}/{{ $selectedClass->capacity }} booked
+                </span>
+            </div>
             <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
@@ -41,7 +53,7 @@
                 </thead>
                 <tbody>
                     @forelse ($bookings as $booking)
-                        <tr>
+                        <tr class="fh-tr">
                             <td class="fh-td font-medium">{{ $booking->member->name }}</td>
                             <td class="fh-td">
                                 @if ($booking->status === 'booked')
@@ -51,7 +63,7 @@
                                 @endif
                             </td>
                             <td class="fh-td">
-                                <button wire:click="cancelBooking({{ $booking->id }})" wire:confirm="Cancel this booking?" class="fh-link-action text-tape">
+                                <button type="button" x-on:click="$store.confirmModal.show({ message: 'Cancel this booking?', danger: true, confirmLabel: 'Cancel Booking', onConfirm: () => $wire.cancelBooking({{ $booking->id }}) })" class="fh-link-action text-tape">
                                     Cancel
                                 </button>
                             </td>

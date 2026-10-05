@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.10.7
@@ -37,13 +37,17 @@ dependencies:
   flutter_riverpod: ^3.3.2
   http: ^1.6.0
   shared_preferences: ^2.5.5
+  flutter_secure_storage: ^9.2.4
   flutter_svg: ^2.3.0
+  cached_network_image: ^3.4.1
   firebase_core: ^3.8.0
   firebase_messaging: ^15.1.6
   flutter_local_notifications: ^18.0.1
   fl_chart: ^0.69.0
   google_fonts: ^6.2.1
   image_picker: ^1.1.2
+  url_launcher: ^6.3.2
+  flutter_native_splash: ^2.4.4
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +59,23 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/branding/app_icon_flat.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#0B0F1A"
+  adaptive_icon_foreground: "assets/images/branding/app_icon_foreground.png"
+
+flutter_native_splash:
+  color: "#0B0F1A"
+  image: "assets/images/branding/logo_splash.png"
+  fullscreen: true
+  android_12:
+    image: "assets/images/branding/logo_splash.png"
+    color: "#0B0F1A"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -73,6 +94,30 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/images/branding/
+
+  fonts:
+    - family: Bricolage Grotesque
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/BricolageGrotesque-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/BricolageGrotesque-ExtraBold.ttf
+          weight: 800
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-SemiBold.ttf
+          weight: 600
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

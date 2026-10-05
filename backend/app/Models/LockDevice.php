@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToGym;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Support\Str;
 
 class LockDevice extends Model
 {
-    use HasFactory;
+    use BelongsToGym, HasFactory;
 
     protected $fillable = [
         'gym_id',
@@ -47,9 +48,8 @@ class LockDevice extends Model
     }
 
     /**
-     * Generates a new plaintext token, stores only its hash, and returns the
-     * plaintext once — the caller must show it to the user immediately, since
-     * it can never be retrieved again (same pattern as Sanctum tokens).
+     * Makes a new device token, saves only its hash, and returns it once.
+     * Show it to the user right away — it can't be seen again after this.
      */
     public static function issueToken(int $gymId, string $name): array
     {

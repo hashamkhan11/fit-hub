@@ -3,10 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Booking;
+use App\Services\PushNotificationService;
 use Illuminate\Console\Command;
-use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
-use Kreait\Laravel\Firebase\Facades\Firebase;
 
 class SendClassReminders extends Command
 {
@@ -27,7 +25,7 @@ class SendClassReminders extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): void
+    public function handle(PushNotificationService $push): void
     {
         $bookings = Booking::query()
             ->where('status', 'booked')
@@ -38,27 +36,16 @@ class SendClassReminders extends Command
             ->with(['gymClass', 'member'])
             ->get();
 
-        $messaging = Firebase::messaging();
-
         foreach ($bookings as $booking) {
-            if (! $booking->member->fcm_token) {
-                continue;
-            }
+            $push->send(
+                $booking->member,
+                'Upcoming class reminder',
+                "{$booking->gymClass->name} starts at ".$booking->gymClass->start_time->format('g:i A'),
+                ['type' => 'class']
+            );
 
-            $message = CloudMessage::new()
-                ->withToken($booking->member->fcm_token)
-                ->withNotification(Notification::create(
-                    'Upcoming class reminder',
-                    "{$booking->gymClass->name} starts at ".$booking->gymClass->start_time->format('g:i A')
-                ));
-
-            try {
-                $messaging->send($message);
-                $booking->update(['reminder_sent_at' => now()]);
-                $this->info("Reminder sent for booking #{$booking->id}");
-            } catch (\Throwable $e) {
-                $this->error("Failed to send reminder for booking #{$booking->id}: {$e->getMessage()}");
-            }
+            $booking->update(['reminder_sent_at' => now()]);
+            $this->info("Reminder sent for booking #{$booking->id}");
         }
     }
 }

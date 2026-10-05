@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToGym;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class GymClass extends Model
 {
-    use HasFactory;
+    use BelongsToGym, HasFactory;
 
     protected $fillable = [
         'gym_id',
@@ -58,6 +59,7 @@ class GymClass extends Model
             $status = $bookedCount < $class->capacity ? 'booked' : 'waitlisted';
 
             return $class->bookings()->create([
+                'gym_id' => $class->gym_id,
                 'member_id' => $member->id,
                 'status' => $status,
             ]);

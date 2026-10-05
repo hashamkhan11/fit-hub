@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Gym;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Gym>
+ * @extends Factory<Gym>
  */
 class GymFactory extends Factory
 {
@@ -16,6 +17,7 @@ class GymFactory extends Factory
             'email' => fake()->unique()->companyEmail(),
             'phone' => fake()->phoneNumber(),
             'address' => fake()->address(),
+            'billing_cycle' => 'monthly',
         ];
     }
 }

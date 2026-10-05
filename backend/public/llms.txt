@@ -1,0 +1,32 @@
+# FitHub
+
+> FitHub is a gym management platform for independent gyms and boutique fitness studios. It replaces spreadsheets and paper sign-in sheets with one operator dashboard covering memberships, attendance, class scheduling, billing, staff access, and revenue analytics.
+
+FitHub is built and operated by RankSol. It is sold as a monthly or annual SaaS subscription with a 14-day free trial and no credit card required to start.
+
+## Core capabilities
+
+- Membership management: onboard members, track plans, and get renewal-lapse alerts before a member churns.
+- QR check-in: members scan a QR code at the front desk to check themselves in — no manual sign-in sheets.
+- Class scheduling and bookings: gym staff publish a class schedule; members book and cancel their own spot from the member app.
+- Billing and payments: Stripe-powered subscription billing with invoices and payment history visible to members.
+- Staff and trainer accounts: scoped staff logins limit access instead of sharing one full-admin login.
+- Analytics and insight dashboard: MRR, churn risk, attendance trends, and revenue reporting in real time.
+- Member mobile app: members view their plan, attendance streak, and class bookings from a dedicated app.
+
+## Audience
+
+Independent gym owners, boutique fitness studio operators, and small gym chains who currently run their business on spreadsheets, paper logs, or disconnected tools (a booking tool, a separate payments tool, a separate spreadsheet).
+
+## Key facts
+
+- Pricing: tiered monthly/annual subscription plans, published at https://fithub.app/#pricing
+- Trial: 14 days, no credit card required
+- Contact: support@example.com (see live site footer for current address)
+- Company: RankSol
+
+## Pages
+
+- Homepage: https://fithub.app/ — product overview, features, pricing
+- Terms of Service: https://fithub.app/legal/terms
+- Privacy Policy: https://fithub.app/legal/privacy

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
@@ -22,13 +23,17 @@ class MemberController extends Controller
 
     public function membership(Request $request)
     {
-        $membership = $request->user()
-            ->memberships()
-            ->with('plan')
-            ->latest('end_date')
-            ->first();
+        $member = $request->user();
 
-        $trainer = $request->user()->trainer;
+        // Prefer the membership that's actually active now over just the latest
+        // end_date, so an old paused one doesn't win. Fall back to latest end_date
+        // only if nothing is active, so expired members still see something.
+        $membership = $member->activeMembership()
+            ?? $member->memberships()->latest('end_date')->first();
+
+        $membership?->loadMissing('plan');
+
+        $trainer = $member->trainer;
 
         return response()->json([
             'membership' => $membership,
@@ -91,9 +96,14 @@ class MemberController extends Controller
 
     public function updateProfile(Request $request)
     {
+        if ($request->has('height_cm') && $request->input('height_cm') === '') {
+            $request->merge(['height_cm' => null]);
+        }
+
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'height_cm' => ['sometimes', 'nullable', 'numeric', 'min:50', 'max:300'],
         ]);
 
         $request->user()->update($validated);
@@ -101,10 +111,25 @@ class MemberController extends Controller
         return response()->json(['member' => $request->user()->fresh()]);
     }
 
+    public function payments(Request $request)
+    {
+        $member = $request->user();
+
+        $payments = Payment::whereHas('membership', fn ($query) => $query->where('member_id', $member->id))
+            ->with('membership.plan')
+            ->orderByDesc('paid_at')
+            ->get();
+
+        return response()->json([
+            'payments' => $payments,
+            'currency_symbol' => $member->gym->currency_symbol,
+        ]);
+    }
+
     public function updatePhoto(Request $request)
     {
         $request->validate([
-            'photo' => ['required', 'image', 'max:2048'],
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         $member = $request->user();
