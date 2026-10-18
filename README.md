@@ -2,6 +2,8 @@
 
 ![FitHub: staff dashboard, member app with QR check-in, and ESP32 door unlock](docs/banner.png)
 
+**Live:** [Website and dashboard](https://fithub.ranksol.net/) · [Android app on Google Play](https://play.google.com/store/apps/details?id=com.ranksol.fithub_app)
+
 FitHub is a gym management system. Gym owners and staff manage their gym from a web dashboard. Members use a mobile app to check in, book classes and track their progress. A door controller built on an ESP32 board lets members open the gym door or a locker from their phone.
 
 One FitHub installation can serve many gyms. Each gym has its own members, plans, classes, staff and door devices. The platform team has a separate admin panel to see all gyms in one place.
